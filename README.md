@@ -1,290 +1,249 @@
-# 🕌 Noor - Islamic Mobile App
+# وَاذْكُر رَبَّكَ - Wadhkur Rabbaka
 
-**نور** - A comprehensive Islamic mobile application built with React Native (Expo) and Node.js, providing essential Islamic features for daily practice.
+<div align="center">
 
-## 📱 Features
+![App Logo](https://img.shields.io/badge/وَاذْكُر%20رَبَّكَ-Islamic%20App-145A32?style=for-the-badge&logo=react&logoColor=white)
 
-### Core Islamic Features
-- **📿 Adhkar (أذكار)** - Morning, evening, and situational remembrances
-- **🤲 Duas (دعاء)** - Supplications from Quran and Sunnah
-- **🕐 Prayer Times (مواقيت الصلاة)** - Accurate prayer times based on location
-- **🧭 Qibla Direction (القبلة)** - Compass pointing to Kaaba
-- **📿 Digital Tasbeeh (تسبيح)** - Dhikr counter with customizable targets
-- **🗓️ Islamic Calendar** - Hijri dates and special occasions
-- **🔔 Smart Reminders** - Customizable notifications for prayers and adhkar
+**A comprehensive Islamic mobile application for daily remembrance, prayers, and spiritual guidance**
 
-### Technical Features
-- 🌙 **Dark/Light Mode** - Automatic theme switching
-- 🌍 **Multi-language Support** - Arabic and English
-- 📱 **Offline Support** - Core features work without internet
-- 🔄 **Real-time Sync** - Data synchronization across devices
-- 🎨 **Beautiful UI** - Islamic-inspired design with Material Design
-- 🔐 **Secure Authentication** - JWT-based user system
+[![React Native](https://img.shields.io/badge/React%20Native-Expo-61DAFB?style=flat-square&logo=react&logoColor=white)](https://expo.dev/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com/)
+[![iOS](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-000000?style=flat-square&logo=apple&logoColor=white)](https://developer.apple.com/)
 
-## 🏗️ Project Structure
+</div>
+
+## 🌟 Features
+
+### 📱 Core Islamic Features
+- **🕌 Adhkar**: Daily remembrance and dhikr with beautiful Arabic typography
+- **🤲 Duas**: Comprehensive collection of Islamic supplications
+- **🕐 Prayer Times**: Accurate prayer times based on your location
+- **🧭 Qibla**: Precise compass direction to Mecca
+- **📿 Tasbeeh**: Digital prayer counter with customizable beads
+- **⚙️ Settings**: User preferences and theme customization
+
+### 🎨 Premium Design
+- **Emerald Green Theme**: Elegant `#145A32` primary color
+- **Gold Accents**: Luxurious `#D4AF37` secondary highlights
+- **Arabic Typography**: Beautiful RTL text rendering
+- **3D Depth Effects**: Modern shadows and elevation
+- **Gradient Backgrounds**: Smooth color transitions
+- **Responsive Design**: Optimized for all screen sizes
+
+### 🔧 Technical Features
+- **Cross-Platform**: iOS and Android support
+- **Offline Capable**: Core features work without internet
+- **Location Services**: Automatic prayer time calculation
+- **Push Notifications**: Prayer reminders and daily adhkar
+- **User Authentication**: Secure JWT-based login system
+- **Data Persistence**: MongoDB for reliable data storage
+
+## 🏗️ Tech Stack
+
+### Frontend
+- **React Native (Expo)** - Cross-platform mobile development
+- **React Navigation** - Screen navigation and routing
+- **React Native Paper** - Material Design components
+- **Expo Linear Gradient** - Beautiful gradient backgrounds
+- **Expo Location** - GPS and location services
+- **Expo Notifications** - Push notification system
+
+### Backend
+- **Node.js** - JavaScript runtime environment
+- **Express.js** - Web application framework
+- **MongoDB** - NoSQL database
+- **Mongoose** - MongoDB object modeling
+- **JWT** - JSON Web Token authentication
+- **Bcrypt** - Password hashing
+
+## 📁 Project Structure
 
 ```
-noor-app/
-├── backend/                 # Node.js + Express + MongoDB
-│   ├── config/             # Database configuration
-│   ├── controllers/        # Route controllers
-│   ├── middleware/         # Authentication & validation
-│   ├── models/            # MongoDB models
-│   ├── routes/            # API routes
-│   ├── server.js          # Main server file
-│   └── .env.example       # Environment variables template
-│
-├── frontend/              # React Native (Expo)
-│   ├── components/        # Reusable UI components
-│   ├── context/          # React contexts (Auth, Theme)
-│   ├── screens/          # App screens
-│   ├── services/         # API services
-│   ├── utils/            # Utility functions
-│   ├── App.js            # Main app component
-│   └── package.json      # Dependencies
-│
-└── README.md             # This file
+wadhkurrabbaka-app/
+├── 📱 frontend/                 # React Native Expo App
+│   ├── 📂 screens/             # App screens
+│   │   ├── HomeScreen.js       # Main dashboard
+│   │   ├── AdhkarScreen.js     # Daily remembrance
+│   │   ├── DuasScreen.js       # Islamic supplications
+│   │   ├── PrayerTimesScreen.js # Prayer times
+│   │   ├── QiblaScreen.js      # Qibla direction
+│   │   ├── TasbeehScreen.js    # Prayer counter
+│   │   └── SettingsScreen.js   # App settings
+│   ├── 📂 components/          # Reusable components
+│   ├── 📂 context/             # React Context providers
+│   ├── 📂 services/            # API services
+│   ├── 📂 utils/               # Utility functions
+│   └── 📄 App.js               # Main app component
+└── 🖥️ backend/                 # Node.js API Server
+    ├── 📂 models/              # Database models
+    │   ├── User.js             # User schema
+    │   ├── Zikr.js             # Adhkar schema
+    │   ├── Dua.js              # Dua schema
+    │   ├── PrayerTime.js       # Prayer times schema
+    │   ├── Tasbeeh.js          # Tasbeeh counter schema
+    │   └── Reminder.js         # Reminder schema
+    ├── 📂 routes/              # API routes
+    ├── 📂 middleware/          # Custom middleware
+    ├── 📂 config/              # Configuration files
+    └── 📄 server.js            # Express server
 ```
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
 - **Node.js** (v16 or higher)
 - **npm** or **yarn**
 - **Expo CLI** (`npm install -g @expo/cli`)
-- **MongoDB Atlas** account (for database)
-- **iOS Simulator** or **Android Emulator** (for testing)
+- **MongoDB** (local or cloud)
+- **iOS Simulator** or **Android Emulator**
 
-### 1. Clone & Navigate
+### 📦 Installation
+
+1. **Clone the repository**
 ```bash
-git clone <your-repo-url>
-cd noor-app
+git clone https://github.com/a7csw/wadhkurrabbaka-app.git
+cd wadhkurrabbaka-app
 ```
 
-### 2. Backend Setup
+2. **Backend Setup**
 ```bash
-# Navigate to backend
 cd backend
-
-# Install dependencies
 npm install
-
-# Copy environment template
 cp .env.example .env
-
-# Edit .env file with your MongoDB URI and JWT secret
-# MONGO_URI=your_mongodb_connection_string
-# JWT_SECRET=your_jwt_secret_key
-
-# Start development server
+# Edit .env with your MongoDB URI and JWT secret
 npm run dev
 ```
 
-The backend will be running on `http://localhost:5000`
-
-### 3. Frontend Setup
+3. **Frontend Setup**
 ```bash
-# Navigate to frontend (new terminal)
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start Expo development server
 npx expo start
 ```
 
-### 4. Testing
-- **iOS**: Press `i` in the terminal or scan QR with Camera app
-- **Android**: Press `a` or scan QR with Expo Go app
-- **Web**: Press `w` for web preview
+### 🎯 Running the App
 
-## ⚙️ Configuration
-
-### Backend Environment Variables
-Create `.env` file in `/backend` directory:
-
-```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Database
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/noor?retryWrites=true&w=majority
-
-# Authentication
-JWT_SECRET=your_super_secret_jwt_key_here
-
-# External APIs
-ALADHAN_API=https://api.aladhan.com/v1
-GOOGLE_API_KEY=your_google_maps_api_key (optional)
-
-# Notifications (optional)
-FCM_SERVER_KEY=your_firebase_server_key
-```
-
-### Frontend Configuration
-Update API URL in `/frontend/services/api.js`:
-- **Development**: Uses your local IP automatically
-- **Production**: Update `API_BASE_URL` with your deployed backend URL
-
-## 🧪 Development
-
-### Backend Development
-```bash
-cd backend
-npm run dev        # Start with nodemon (auto-reload)
-npm start          # Start production server
-npm test           # Run tests (when implemented)
-```
-
-### Frontend Development
+#### iOS Simulator
 ```bash
 cd frontend
-npx expo start     # Start development server
-npx expo start -c  # Clear cache and start
-npm run ios        # Run on iOS simulator
-npm run android    # Run on Android emulator
-npm run web        # Run on web browser
+npx expo start --ios
 ```
 
-## 📊 API Documentation
-
-### Base URL
-- **Development**: `http://localhost:5000/api/v1`
-- **Production**: `https://your-domain.com/api/v1`
-
-### Key Endpoints
-- `POST /auth/login` - User authentication
-- `GET /zikr` - Get adhkar by category
-- `GET /dua` - Get duas with filters
-- `GET /prayer/times` - Get prayer times by location
-- `GET /qibla/direction` - Get Qibla direction
-- `GET /reminder` - Get user reminders
-
-### Authentication
-Most endpoints require JWT token in header:
-```
-Authorization: Bearer <your_jwt_token>
+#### Android Emulator
+```bash
+cd frontend
+npx expo start --android
 ```
 
-## 🎨 UI/UX Design
+#### Web Preview
+```bash
+cd frontend
+npx expo start --web
+```
+
+## 🔌 API Endpoints
+
+### 🔐 Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/profile` - Get user profile
+- `PUT /api/auth/profile` - Update user profile
+
+### 📿 Adhkar
+- `GET /api/adhkar` - Get all adhkar
+- `GET /api/adhkar/:id` - Get specific adhkar
+- `POST /api/adhkar` - Create new adhkar (admin)
+- `PUT /api/adhkar/:id` - Update adhkar (admin)
+
+### 🤲 Duas
+- `GET /api/duas` - Get all duas
+- `GET /api/duas/:id` - Get specific dua
+- `POST /api/duas` - Create new dua (admin)
+- `PUT /api/duas/:id` - Update dua (admin)
+
+### 🕐 Prayer Times
+- `GET /api/prayer-times` - Get prayer times for location
+- `POST /api/prayer-times` - Update prayer times
+- `GET /api/prayer-times/qibla` - Get Qibla direction
+
+### 📿 Tasbeeh
+- `GET /api/tasbeeh` - Get user's tasbeeh counters
+- `POST /api/tasbeeh` - Create new tasbeeh counter
+- `PUT /api/tasbeeh/:id` - Update tasbeeh counter
+
+## 🎨 Theme & Design
 
 ### Color Palette
-- **Primary**: `#2E8B57` (Sea Green) - Nature and growth in Islam
-- **Secondary**: `#DAA520` (Goldenrod) - Islamic architecture
-- **Accent**: `#CD853F` (Peru) - Warm earth tones
+- **Primary**: `#145A32` (Emerald Green)
+- **Secondary**: `#D4AF37` (Gold)
+- **Text**: `#1E1E1E` (Dark Gray)
+- **Background**: `#FAF9F6` (Off-White)
+- **Accent**: `#2E7D32` (Darker Green)
 
 ### Typography
-- **Arabic**: Noto Sans Arabic (when available)
-- **Latin**: System default with proper RTL support
+- **Arabic Font**: System default with RTL support
+- **English Font**: System default
+- **Sizes**: Responsive using `rem` and `vw` units
 
-### Layout
-- **Material Design 3** components via React Native Paper
-- **RTL Support** for Arabic text
-- **Responsive Design** for various screen sizes
+## 🌍 Internationalization
 
-## 🌍 Localization
+- **Arabic (RTL)**: Primary language with proper text direction
+- **English**: Secondary language support
+- **Dynamic Greetings**: Time-based Arabic greetings
+- **Cultural Sensitivity**: Islamic calendar and traditions
 
-The app supports:
-- **Arabic (العربية)** - Primary language for Islamic content
-- **English** - Interface and translations
+## 📱 Platform Support
 
-### Adding Translations
-1. Update language context in `/frontend/context/ThemeContext.js`
-2. Add translation strings for new features
-3. Ensure RTL layout support for Arabic
-
-## 📱 Deployment
-
-### Backend Deployment (Heroku/Railway/DigitalOcean)
-```bash
-# Example for Heroku
-heroku create your-noor-backend
-git subtree push --prefix backend heroku main
-
-# Set environment variables
-heroku config:set MONGO_URI=your_mongodb_uri
-heroku config:set JWT_SECRET=your_jwt_secret
-```
-
-### Frontend Deployment (Expo EAS)
-```bash
-# Install EAS CLI
-npm install -g eas-cli
-
-# Configure EAS
-eas build:configure
-
-# Build for production
-eas build --platform all
-
-# Submit to app stores
-eas submit
-```
+- **iOS**: 13.0+ (iPhone and iPad)
+- **Android**: API 21+ (Android 5.0+)
+- **Web**: Modern browsers with PWA support
 
 ## 🤝 Contributing
 
-### Development Workflow
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+We welcome contributions to make this Islamic app better! Here's how you can help:
 
-### Code Style
-- **ESLint** for JavaScript linting
-- **Prettier** for code formatting
-- **Islamic naming** - Use Arabic terms for Islamic concepts
-- **Comments** - Explain Islamic context when needed
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-### Islamic Guidelines
-- All content must be authentic (Quran/Sahih Hadith)
-- Provide proper attribution for Islamic texts
-- Respect Islamic principles in UI/UX design
-- Ensure accuracy in prayer times and Qibla direction
-
-## 📚 Islamic Data Sources
-
-### Adhkar & Duas
-- **Hisnul Muslim** (Fortress of the Muslim)
-- **Sahih Bukhari** and **Sahih Muslim**
-- **Authenticated** supplications only
-
-### Prayer Times
-- **Aladhan API** - Islamic prayer times calculation
-- **Multiple calculation methods** (MWL, ISNA, etc.)
-- **Qibla direction** using spherical trigonometry
-
-### Calendar
-- **Hijri Calendar** conversion
-- **Islamic events** and special dates
+### Development Guidelines
+- Follow Islamic principles in content and design
+- Maintain Arabic language accuracy
+- Test on both iOS and Android
+- Ensure accessibility compliance
+- Write clear commit messages
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **Allah (سبحانه وتعالى)** - For guidance and blessings
-- **Islamic scholars** - For authentic Islamic knowledge
-- **Open source community** - For amazing tools and libraries
-- **Aladhan API** - For Islamic prayer times data
+- **Quranic Verses**: From the Holy Quran
+- **Islamic Content**: Authentic hadith and scholarly sources
+- **Prayer Times**: Aladhan API for accurate calculations
+- **Qibla Direction**: Mathematical calculations for precise direction
 
 ## 📞 Support
 
-### Technical Support
-- **Issues**: [GitHub Issues](link-to-issues)
-- **Email**: support@noorapp.com
-- **Discord**: [Community Server](link-to-discord)
+If you have any questions or need help:
 
-### Islamic Content Verification
-If you find any Islamic content that needs verification or correction, please reach out to our Islamic advisory team.
+- **Issues**: [GitHub Issues](https://github.com/a7csw/wadhkurrabbaka-app/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/a7csw/wadhkurrabbaka-app/discussions)
+- **Email**: [Contact Developer](mailto:your-email@example.com)
 
 ---
 
-**Built with ❤️ for the Ummah**
+<div align="center">
 
-*"وَذَكِّرْ فَإِنَّ الذِّكْرَىٰ تَنفَعُ الْمُؤْمِنِينَ"*
+**بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ**
 
-*"And remind, for indeed, the reminder benefits the believers." - Quran 51:55*
+*In the name of Allah, the Most Gracious, the Most Merciful*
+
+Made with ❤️ for the Muslim community
+
+</div>
+
