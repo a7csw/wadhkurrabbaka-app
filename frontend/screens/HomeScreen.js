@@ -14,7 +14,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
 // import { MotiView } from 'moti'; // Temporarily disabled
 import { View as MotiView } from 'react-native'; // Use plain View as fallback
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,68 +21,28 @@ import { colors, spacing, typography, shadows, animations } from '../utils/theme
 
 const { width } = Dimensions.get('window');
 
-// Simple Mosque Silhouette Component
+// Simple Mosque Silhouette Component using React Native Views
 const MosqueSilhouette = () => (
-  <Svg
-    width={width * 0.8}
-    height={width * 0.6}
-    viewBox="0 0 300 200"
-    style={styles.mosqueSvg}
-  >
+  <View style={styles.mosqueContainer}>
     {/* Left Minaret */}
-    <Path
-      d="M 40 180 L 40 80 L 35 80 L 35 70 L 45 70 L 45 80 L 40 80"
-      fill="white"
-      opacity={0.15}
-    />
-    <Circle cx="40" cy="65" r="5" fill="white" opacity={0.15} />
-    <Path
-      d="M 37 60 L 40 50 L 43 60 Z"
-      fill="white"
-      opacity={0.15}
-    />
-
-    {/* Right Minaret */}
-    <Path
-      d="M 260 180 L 260 80 L 255 80 L 255 70 L 265 70 L 265 80 L 260 80"
-      fill="white"
-      opacity={0.15}
-    />
-    <Circle cx="260" cy="65" r="5" fill="white" opacity={0.15} />
-    <Path
-      d="M 257 60 L 260 50 L 263 60 Z"
-      fill="white"
-      opacity={0.15}
-    />
-
-    {/* Main Dome */}
-    <Path
-      d="M 100 180 L 100 100 L 200 100 L 200 180"
-      fill="white"
-      opacity={0.12}
-    />
-    <Path
-      d="M 90 100 Q 150 40 210 100"
-      fill="white"
-      opacity={0.15}
-    />
-    <Circle cx="150" cy="100" r="50" fill="white" opacity={0.12} />
+    <View style={styles.leftMinaret} />
+    <View style={styles.leftMinaretTop} />
+    <View style={styles.leftMinaretCrescent} />
     
-    {/* Dome Top */}
-    <Circle cx="150" cy="45" r="8" fill="white" opacity={0.15} />
-    <Path
-      d="M 147 40 L 150 25 L 153 40 Z"
-      fill="white"
-      opacity={0.15}
-    />
-
+    {/* Right Minaret */}
+    <View style={styles.rightMinaret} />
+    <View style={styles.rightMinaretTop} />
+    <View style={styles.rightMinaretCrescent} />
+    
+    {/* Main Dome */}
+    <View style={styles.domeBase} />
+    <View style={styles.dome} />
+    <View style={styles.domeTop} />
+    <View style={styles.domeCrescent} />
+    
     {/* Entrance Arch */}
-    <Path
-      d="M 130 180 L 130 140 Q 150 120 170 140 L 170 180"
-      fill="white"
-      opacity={0.08}
-    />
-  </Svg>
+    <View style={styles.entrance} />
+  </View>
 );
 
 const HomeScreen = ({ navigation }) => {
@@ -300,15 +259,112 @@ const styles = StyleSheet.create({
   },
   mosqueBackground: {
     position: 'absolute',
-    top: '25%',
-    left: '10%',
-    right: '10%',
+    top: '20%',
+    left: '5%',
+    right: '5%',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 0,
   },
-  mosqueSvg: {
-    opacity: 0.15,
+  mosqueContainer: {
+    width: width * 0.9,
+    height: width * 0.6,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  // Left Minaret
+  leftMinaret: {
+    position: 'absolute',
+    left: width * 0.1,
+    bottom: 0,
+    width: 8,
+    height: width * 0.4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 4,
+  },
+  leftMinaretTop: {
+    position: 'absolute',
+    left: width * 0.1 - 2,
+    bottom: width * 0.4 - 20,
+    width: 12,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 6,
+  },
+  leftMinaretCrescent: {
+    position: 'absolute',
+    left: width * 0.1 - 1,
+    bottom: width * 0.4 - 5,
+    width: 10,
+    height: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 5,
+  },
+  // Right Minaret
+  rightMinaret: {
+    position: 'absolute',
+    right: width * 0.1,
+    bottom: 0,
+    width: 8,
+    height: width * 0.4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 4,
+  },
+  rightMinaretTop: {
+    position: 'absolute',
+    right: width * 0.1 - 2,
+    bottom: width * 0.4 - 20,
+    width: 12,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 6,
+  },
+  rightMinaretCrescent: {
+    position: 'absolute',
+    right: width * 0.1 - 1,
+    bottom: width * 0.4 - 5,
+    width: 10,
+    height: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 5,
+  },
+  // Main Dome
+  domeBase: {
+    width: width * 0.4,
+    height: width * 0.25,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 8,
+    marginBottom: 0,
+  },
+  dome: {
+    width: width * 0.4,
+    height: width * 0.2,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: width * 0.2,
+    marginBottom: -width * 0.1,
+  },
+  domeTop: {
+    width: 16,
+    height: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 8,
+    marginBottom: 5,
+  },
+  domeCrescent: {
+    width: 12,
+    height: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 6,
+  },
+  // Entrance
+  entrance: {
+    position: 'absolute',
+    bottom: 0,
+    width: width * 0.15,
+    height: width * 0.15,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: width * 0.15 / 2,
+    marginBottom: -width * 0.075,
   },
   scrollContent: {
     paddingTop: 60,
