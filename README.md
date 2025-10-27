@@ -18,17 +18,21 @@
 ### 📱 Core Islamic Features
 - **🕌 Adhkar**: Daily remembrance and dhikr with beautiful Arabic typography
 - **🤲 Duas**: Comprehensive collection of Islamic supplications
-- **🕐 Prayer Times**: Accurate prayer times based on your location
+- **🕐 Prayer Times**: Accurate prayer times based on your location with live countdown widget
 - **🧭 Qibla**: Precise compass direction to Mecca
 - **📿 Tasbeeh**: Digital prayer counter with customizable beads
 - **⚙️ Settings**: User preferences and theme customization
 
 ### 🎨 Premium Design
+- **📸 Dynamic Backgrounds**: Real photos of Kaaba & Prophet's Mosque from Unsplash
+  - Changes based on prayer times (dawn, daylight, afternoon, sunset, night)
+  - 3-hour caching for optimal performance
+  - Gradient fallbacks for offline use
+- **🕋 Prayer Widget**: Live top-bar showing next prayer, countdown, and location
 - **Emerald Green Theme**: Elegant `#145A32` primary color
 - **Gold Accents**: Luxurious `#D4AF37` secondary highlights
 - **Arabic Typography**: Beautiful RTL text rendering
 - **3D Depth Effects**: Modern shadows and elevation
-- **Gradient Backgrounds**: Smooth color transitions
 - **Responsive Design**: Optimized for all screen sizes
 
 ### 🔧 Technical Features
@@ -119,8 +123,36 @@ npm run dev
 ```bash
 cd frontend
 npm install
+cp .env.example .env
+# Add your Unsplash API key to .env (see Setup Guide below)
 npx expo start
 ```
+
+### 📸 Unsplash API Setup (Required for Background Photos)
+
+The app displays beautiful, dynamic photos of the Kaaba and Prophet's Mosque. To enable this feature:
+
+1. **Get a free Unsplash API key:**
+   - Visit [https://unsplash.com/developers](https://unsplash.com/developers)
+   - Create a free account
+   - Register a new application
+   - Copy your Access Key
+
+2. **Add the API key to `.env`:**
+   ```bash
+   cd frontend
+   # Edit .env file
+   UNSPLASH_ACCESS_KEY=your_actual_access_key_here
+   ```
+
+3. **Restart Expo:**
+   ```bash
+   npx expo start --clear
+   ```
+
+📖 **For detailed setup instructions, see [UNSPLASH_SETUP_GUIDE.md](./UNSPLASH_SETUP_GUIDE.md)**
+
+**Note:** The app works without an API key using gradient fallbacks, but photos enhance the experience significantly!
 
 ### 🎯 Running the App
 
