@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "وَاذْكُر رَبَّكَ",
+    "slug": "wadhkurrabbaka",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "entryPoint": "./index.js",
+    "description": "Islamic app for daily adhkar, duas, prayer times, and Qibla direction",
+    "primaryColor": "#145A32",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#145A32"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to calculate prayer times and Qibla direction."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#145A32",
+          "sounds": ["./assets/notification.wav"]
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wadhkurrabbaka.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to calculate prayer times and Qibla direction.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location to provide accurate prayer times.",
+        "NSMotionUsageDescription": "This app needs access to motion sensors for the Qibla compass feature."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#145A32"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.wadhkurrabbaka.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
