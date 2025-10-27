@@ -1,10 +1,10 @@
 /**
  * وَاذْكُر رَبَّكَ - Home Screen
  * 
- * Main dashboard with animated feature cards and Islamic content
+ * Main dashboard with dynamic Kaaba/Prophet Mosque backgrounds and prayer widget
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -12,60 +12,70 @@ import {
   TouchableOpacity,
   Text,
   Dimensions,
+  ImageBackground,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-// import { MotiView } from 'moti'; // Temporarily disabled
-import { View as MotiView } from 'react-native'; // Use plain View as fallback
+import { View as MotiView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, animations } from '../utils/theme';
+import { colors, spacing, shadows } from '../utils/theme';
+import { getBackgroundImage, triggerUnsplashDownload, getFallbackBackground } from '../utils/backgroundUtils';
+import { fetchPrayerTimes } from '../utils/apiUtils';
+import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
+import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-// Simple Mosque Silhouette Component using React Native Views
-const MosqueSilhouette = () => (
-  <View style={styles.mosqueContainer}>
-    {/* Left Minaret */}
-    <View style={styles.leftMinaret} />
-    <View style={styles.leftMinaretTop} />
-    <View style={styles.leftMinaretCrescent} />
-    
-    {/* Right Minaret */}
-    <View style={styles.rightMinaret} />
-    <View style={styles.rightMinaretTop} />
-    <View style={styles.rightMinaretCrescent} />
-    
-    {/* Main Dome */}
-    <View style={styles.domeBase} />
-    <View style={styles.dome} />
-    <View style={styles.domeTop} />
-    <View style={styles.domeCrescent} />
-    
-    {/* Entrance Arch */}
-    <View style={styles.entrance} />
-    
-    {/* Debug indicator - remove this later */}
-    <View style={styles.debugIndicator} />
-  </View>
-);
+/**
+ * Prayer Widget Component
+ * Shows next prayer, countdown, and location
+ */
+const PrayerWidget = ({ prayerTimes, location, nextPrayer }) => {
+  if (!nextPrayer || !location) return null;
+
+  return (
+    <MotiView style={styles.prayerWidget}>
+      <LinearGradient
+        colors={['rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.4)']}
+        style={styles.prayerWidgetGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        {/* Next Prayer */}
+        <View style={styles.prayerSection}>
+          <Text style={styles.prayerIcon}>{getPrayerIcon(nextPrayer.name)}</Text>
+          <Text style={styles.prayerNameArabic}>{getPrayerNameInArabic(nextPrayer.name)}</Text>
+          <Text style={styles.prayerNameEnglish}>{nextPrayer.name}</Text>
+        </View>
+
+        {/* Countdown */}
+        <View style={styles.countdownSection}>
+          <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" />
+          <Text style={styles.countdownText}>{nextPrayer.countdown.shortFormatted}</Text>
+        </View>
+
+        {/* Location */}
+        <View style={styles.locationSection}>
+          <MaterialCommunityIcons name="map-marker" size={18} color="#D4AF37" />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location.city || 'Unknown'}
+          </Text>
+        </View>
+      </LinearGradient>
+    </MotiView>
+  );
+};
 
 const HomeScreen = ({ navigation }) => {
-  const [greeting, setGreeting] = useState('');
+  const [backgroundData, setBackgroundData] = useState(null);
+  const [prayerTimes, setPrayerTimes] = useState(null);
+  const [nextPrayer, setNextPrayer] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    updateGreeting();
-  }, []);
-
-  const updateGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting('صباح الخير');
-    } else if (hour < 18) {
-      setGreeting('مساء الخير');
-    } else {
-      setGreeting('مساء الخير');
-    }
-  };
-
+  // Features list - removed Prayer Times card
   const features = [
     {
       id: 1,
@@ -87,15 +97,6 @@ const HomeScreen = ({ navigation }) => {
     },
     {
       id: 3,
-      icon: 'clock-outline',
-      arabicTitle: 'مواقيت الصلاة',
-      englishTitle: 'Prayer Times',
-      description: 'Salah schedule',
-      color: colors.primary,
-      screen: 'PrayerTimes',
-    },
-    {
-      id: 4,
       icon: 'compass-outline',
       arabicTitle: 'القبلة',
       englishTitle: 'Qibla',
@@ -104,7 +105,7 @@ const HomeScreen = ({ navigation }) => {
       screen: 'Qibla',
     },
     {
-      id: 5,
+      id: 4,
       icon: 'counter',
       arabicTitle: 'تسبيح',
       englishTitle: 'Tasbeeh',
@@ -113,7 +114,7 @@ const HomeScreen = ({ navigation }) => {
       screen: 'Tasbeeh',
     },
     {
-      id: 6,
+      id: 5,
       icon: 'cog-outline',
       arabicTitle: 'إعدادات',
       englishTitle: 'Settings',
@@ -123,24 +124,76 @@ const HomeScreen = ({ navigation }) => {
     },
   ];
 
+  /**
+   * Load background image and prayer data
+   */
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Load background image
+      const bgData = await getBackgroundImage();
+      setBackgroundData(bgData);
+
+      // Trigger Unsplash download tracking if from API
+      if (bgData && bgData.downloadLocation && !bgData.isFallback) {
+        await triggerUnsplashDownload(bgData.downloadLocation);
+      }
+
+      // Load location and prayer times
+      const currentLoc = await getCurrentLocation();
+      if (currentLoc) {
+        const city = await getCityFromCoordinates(currentLoc.latitude, currentLoc.longitude);
+        setLocation({ ...currentLoc, city });
+
+        const times = await fetchPrayerTimes(currentLoc.latitude, currentLoc.longitude);
+        setPrayerTimes(times);
+        
+        const next = calculateNextPrayer(times);
+        setNextPrayer(next);
+      }
+    } catch (error) {
+      console.error('Error loading home screen data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Update countdown every second
+  useEffect(() => {
+    if (!prayerTimes) return;
+
+    const interval = setInterval(() => {
+      const next = calculateNextPrayer(prayerTimes);
+      setNextPrayer(next);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [prayerTimes]);
+
+  // Refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
+
+  /**
+   * Feature Card Component
+   */
   const FeatureCard = ({ feature, index }) => (
-    <MotiView
-      from={{ opacity: 0, translateY: 50 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{
-        type: 'spring',
-        delay: index * 100,
-        damping: 15,
-      }}
-      style={styles.featureCardContainer}
-    >
+    <MotiView style={styles.featureCardContainer}>
       <TouchableOpacity
         style={[styles.featureCard, { borderLeftColor: feature.color }]}
         onPress={() => navigation.navigate(feature.screen)}
         activeOpacity={0.8}
       >
         <LinearGradient
-          colors={['#ffffff', '#fafafa']}
+          colors={['rgba(255, 255, 255, 0.95)', 'rgba(250, 250, 250, 0.95)']}
           style={styles.cardGradient}
         >
           <View style={styles.iconContainer}>
@@ -162,47 +215,78 @@ const HomeScreen = ({ navigation }) => {
     </MotiView>
   );
 
+  // Render loading state
+  if (loading && !backgroundData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Render background (image or gradient fallback)
+  const renderBackground = () => {
+    if (backgroundData && backgroundData.url && !backgroundData.isFallback) {
+      // Use ImageBackground for Unsplash photos
+      return (
+        <ImageBackground
+          source={{ uri: backgroundData.url }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={['rgba(0, 64, 32, 0.55)', 'rgba(10, 79, 63, 0.65)', 'rgba(20, 90, 50, 0.75)']}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </ImageBackground>
+      );
+    } else {
+      // Use gradient fallback
+      const gradientColors = backgroundData?.url || getFallbackBackground(backgroundData?.prayerPeriod || 'Fajr');
+      return (
+        <LinearGradient
+          colors={gradientColors}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Gradient Background */}
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
-      {/* Subtle Mosque Silhouette Background */}
-      <View style={styles.mosqueBackground}>
-        <MosqueSilhouette />
-      </View>
+      {/* Dynamic Background */}
+      {renderBackground()}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+          />
+        }
       >
-        {/* Header Section with Animation */}
-        <MotiView
-          from={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', damping: 12 }}
-          style={styles.header}
-        >
+        {/* Header Section */}
+        <MotiView style={styles.header}>
           <Text style={styles.appTitle}>وَاذْكُر رَبَّكَ</Text>
-          <Text style={styles.appSubtitle}>تطبيق الأذكار والأدعية</Text>
-          <View style={styles.divider} />
-          <Text style={styles.greeting}>{greeting}</Text>
         </MotiView>
 
+        {/* Prayer Widget */}
+        <PrayerWidget
+          prayerTimes={prayerTimes}
+          location={location}
+          nextPrayer={nextPrayer}
+        />
+
         {/* Welcome Card */}
-        <MotiView
-          from={{ opacity: 0, translateY: 30 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', delay: 200 }}
-          style={styles.welcomeCard}
-        >
+        <MotiView style={styles.welcomeCard}>
           <LinearGradient
-            colors={['#ffffff', '#fdfcfa']}
+            colors={['rgba(255, 255, 255, 0.95)', 'rgba(253, 252, 250, 0.95)']}
             style={styles.welcomeCardGradient}
           >
             <Text style={styles.welcomeText}>
@@ -222,14 +306,9 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Quranic Quote */}
-        <MotiView
-          from={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', delay: 800 }}
-          style={styles.quoteCard}
-        >
+        <MotiView style={styles.quoteCard}>
           <LinearGradient
-            colors={[colors.primary, colors.primaryDark]}
+            colors={['rgba(20, 90, 50, 0.9)', 'rgba(10, 79, 63, 0.9)']}
             style={styles.quoteGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -250,6 +329,15 @@ const HomeScreen = ({ navigation }) => {
           </LinearGradient>
         </MotiView>
 
+        {/* Photo Credit (if from Unsplash) */}
+        {backgroundData && backgroundData.photographer && !backgroundData.isFallback && (
+          <View style={styles.photoCredit}>
+            <Text style={styles.photoCreditText}>
+              Photo by {backgroundData.photographer} on Unsplash
+            </Text>
+          </View>
+        )}
+
         <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
@@ -260,128 +348,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  mosqueBackground: {
-    position: 'absolute',
-    top: '15%',
-    left: '5%',
-    right: '5%',
-    alignItems: 'center',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
-    zIndex: 0,
-  },
-  mosqueContainer: {
-    width: width * 0.8,
-    height: width * 0.5,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: colors.primary,
   },
-  debugIndicator: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 20,
-    height: 20,
-    backgroundColor: 'rgba(255, 0, 0, 0.3)',
-    borderRadius: 10,
-  },
-  // Left Minaret
-  leftMinaret: {
-    position: 'absolute',
-    left: width * 0.12,
-    bottom: 0,
-    width: 6,
-    height: width * 0.35,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 3,
-  },
-  leftMinaretTop: {
-    position: 'absolute',
-    left: width * 0.12 - 3,
-    bottom: width * 0.35 - 15,
-    width: 12,
-    height: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 6,
-  },
-  leftMinaretCrescent: {
-    position: 'absolute',
-    left: width * 0.12 - 2,
-    bottom: width * 0.35 - 8,
-    width: 10,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 5,
-  },
-  // Right Minaret
-  rightMinaret: {
-    position: 'absolute',
-    right: width * 0.12,
-    bottom: 0,
-    width: 6,
-    height: width * 0.35,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 3,
-  },
-  rightMinaretTop: {
-    position: 'absolute',
-    right: width * 0.12 - 3,
-    bottom: width * 0.35 - 15,
-    width: 12,
-    height: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 6,
-  },
-  rightMinaretCrescent: {
-    position: 'absolute',
-    right: width * 0.12 - 2,
-    bottom: width * 0.35 - 8,
-    width: 10,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 5,
-  },
-  // Main Dome
-  domeBase: {
-    width: width * 0.35,
-    height: width * 0.2,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 8,
-    marginBottom: 0,
-  },
-  dome: {
-    width: width * 0.35,
-    height: width * 0.18,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: width * 0.18,
-    marginBottom: -width * 0.09,
-  },
-  domeTop: {
-    width: 14,
-    height: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 7,
-    marginBottom: 4,
-  },
-  domeCrescent: {
-    width: 10,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderRadius: 5,
-  },
-  // Entrance
-  entrance: {
-    position: 'absolute',
-    bottom: 0,
-    width: width * 0.12,
-    height: width * 0.12,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: width * 0.12 / 2,
-    marginBottom: -width * 0.06,
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    color: '#fff',
   },
   scrollContent: {
     paddingTop: 60,
@@ -390,38 +366,81 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
     paddingVertical: spacing.lg,
   },
   appTitle: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: colors.textLight,
+    color: '#fff',
     textAlign: 'center',
-    marginBottom: spacing.xs,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  appSubtitle: {
-    fontSize: 16,
-    color: colors.textLight,
-    opacity: 0.9,
-    textAlign: 'center',
+  
+  // Prayer Widget Styles
+  prayerWidget: {
+    marginBottom: spacing.lg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...shadows.large,
   },
-  divider: {
-    width: 60,
-    height: 3,
-    backgroundColor: colors.gold,
-    marginVertical: spacing.md,
-    borderRadius: 2,
+  prayerWidgetGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  greeting: {
+  prayerSection: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  prayerIcon: {
     fontSize: 24,
-    fontWeight: '600',
-    color: colors.gold,
-    textAlign: 'center',
+    marginBottom: 4,
   },
+  prayerNameArabic: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  prayerNameEnglish: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  countdownSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  countdownText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  locationSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  locationText: {
+    fontSize: 13,
+    color: '#D4AF37',
+    fontWeight: '600',
+    maxWidth: width * 0.25,
+  },
+
+  // Welcome Card
   welcomeCard: {
     marginBottom: spacing.lg,
     borderRadius: 20,
@@ -445,6 +464,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+
+  // Feature Cards
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -471,7 +492,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: colors.backgroundDark,
+    backgroundColor: 'rgba(10, 79, 63, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -497,6 +518,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
   },
+
+  // Quote Card
   quoteCard: {
     borderRadius: 20,
     overflow: 'hidden',
@@ -513,14 +536,14 @@ const styles = StyleSheet.create({
   quoteArabic: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.textLight,
+    color: '#fff',
     textAlign: 'center',
     marginBottom: spacing.md,
     lineHeight: 36,
   },
   quoteTranslation: {
     fontSize: 15,
-    color: colors.textLight,
+    color: '#fff',
     textAlign: 'center',
     opacity: 0.9,
     marginBottom: spacing.sm,
@@ -532,6 +555,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
+
+  // Photo Credit
+  photoCredit: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  photoCreditText: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+  },
+
   bottomSpace: {
     height: spacing.xl,
   },
