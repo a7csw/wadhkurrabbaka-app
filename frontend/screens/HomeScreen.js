@@ -14,12 +14,77 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, Circle } from 'react-native-svg';
 // import { MotiView } from 'moti'; // Temporarily disabled
 import { View as MotiView } from 'react-native'; // Use plain View as fallback
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows, animations } from '../utils/theme';
 
 const { width } = Dimensions.get('window');
+
+// Simple Mosque Silhouette Component
+const MosqueSilhouette = () => (
+  <Svg
+    width={width * 0.8}
+    height={width * 0.6}
+    viewBox="0 0 300 200"
+    style={styles.mosqueSvg}
+  >
+    {/* Left Minaret */}
+    <Path
+      d="M 40 180 L 40 80 L 35 80 L 35 70 L 45 70 L 45 80 L 40 80"
+      fill="white"
+      opacity={0.15}
+    />
+    <Circle cx="40" cy="65" r="5" fill="white" opacity={0.15} />
+    <Path
+      d="M 37 60 L 40 50 L 43 60 Z"
+      fill="white"
+      opacity={0.15}
+    />
+
+    {/* Right Minaret */}
+    <Path
+      d="M 260 180 L 260 80 L 255 80 L 255 70 L 265 70 L 265 80 L 260 80"
+      fill="white"
+      opacity={0.15}
+    />
+    <Circle cx="260" cy="65" r="5" fill="white" opacity={0.15} />
+    <Path
+      d="M 257 60 L 260 50 L 263 60 Z"
+      fill="white"
+      opacity={0.15}
+    />
+
+    {/* Main Dome */}
+    <Path
+      d="M 100 180 L 100 100 L 200 100 L 200 180"
+      fill="white"
+      opacity={0.12}
+    />
+    <Path
+      d="M 90 100 Q 150 40 210 100"
+      fill="white"
+      opacity={0.15}
+    />
+    <Circle cx="150" cy="100" r="50" fill="white" opacity={0.12} />
+    
+    {/* Dome Top */}
+    <Circle cx="150" cy="45" r="8" fill="white" opacity={0.15} />
+    <Path
+      d="M 147 40 L 150 25 L 153 40 Z"
+      fill="white"
+      opacity={0.15}
+    />
+
+    {/* Entrance Arch */}
+    <Path
+      d="M 130 180 L 130 140 Q 150 120 170 140 L 170 180"
+      fill="white"
+      opacity={0.08}
+    />
+  </Svg>
+);
 
 const HomeScreen = ({ navigation }) => {
   const [greeting, setGreeting] = useState('');
@@ -145,6 +210,11 @@ const HomeScreen = ({ navigation }) => {
         end={{ x: 1, y: 1 }}
       />
 
+      {/* Subtle Mosque Silhouette Background */}
+      <View style={styles.mosqueBackground}>
+        <MosqueSilhouette />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -227,6 +297,18 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  mosqueBackground: {
+    position: 'absolute',
+    top: '25%',
+    left: '10%',
+    right: '10%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 0,
+  },
+  mosqueSvg: {
+    opacity: 0.15,
   },
   scrollContent: {
     paddingTop: 60,
