@@ -20,12 +20,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { View as MotiView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, shadows } from '../utils/theme';
-import { getBackgroundImage, triggerUnsplashDownload, getFallbackBackground } from '../utils/backgroundUtils';
 import { fetchPrayerTimes } from '../utils/apiUtils';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
 import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
 
 const { width, height } = Dimensions.get('window');
+
+// Import local background images
+const bg1 = require('../assets/backgrounds/bg1.jpg');
+const bg2 = require('../assets/backgrounds/bg2.jpg');
+const bg3 = require('../assets/backgrounds/bg3.jpg');
+
+/**
+ * Get rotating background image based on day of month
+ * @returns {object} - Local image require statement
+ */
+const getRotatingBackground = () => {
+  const images = [bg1, bg2, bg3];
+  const dayOfMonth = new Date().getDate();
+  const index = dayOfMonth % 3;
+  return images[index];
+};
 
 /**
  * Prayer Widget Component
@@ -68,12 +83,12 @@ const PrayerWidget = ({ prayerTimes, location, nextPrayer }) => {
 };
 
 const HomeScreen = ({ navigation }) => {
-  const [backgroundData, setBackgroundData] = useState(null);
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [backgroundImage] = useState(getRotatingBackground());
 
   // Features list - removed Prayer Times card
   const features = [
@@ -125,20 +140,11 @@ const HomeScreen = ({ navigation }) => {
   ];
 
   /**
-   * Load background image and prayer data
+   * Load prayer data
    */
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Load background image
-      const bgData = await getBackgroundImage();
-      setBackgroundData(bgData);
-
-      // Trigger Unsplash download tracking if from API
-      if (bgData && bgData.downloadLocation && !bgData.isFallback) {
-        await triggerUnsplashDownload(bgData.downloadLocation);
-      }
 
       // Load location and prayer times
       const currentLoc = await getCurrentLocation();
@@ -215,50 +221,40 @@ const HomeScreen = ({ navigation }) => {
     </MotiView>
   );
 
-  // Render loading state
-  if (loading && !backgroundData) {
+  // Render loading state (only while fetching prayer data)
+  if (loading && !prayerTimes) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      <ImageBackground
+        source={backgroundImage}
+        style={styles.loadingContainer}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['rgba(0, 64, 32, 0.55)', 'rgba(10, 79, 63, 0.65)', 'rgba(20, 90, 50, 0.75)']}
+          style={StyleSheet.absoluteFillObject}
+        >
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </LinearGradient>
+      </ImageBackground>
     );
   }
 
-  // Render background (image or gradient fallback)
-  const renderBackground = () => {
-    if (backgroundData && backgroundData.url && !backgroundData.isFallback) {
-      // Use ImageBackground for Unsplash photos
-      return (
-        <ImageBackground
-          source={{ uri: backgroundData.url }}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
-        >
-          <LinearGradient
-            colors={['rgba(0, 64, 32, 0.55)', 'rgba(10, 79, 63, 0.65)', 'rgba(20, 90, 50, 0.75)']}
-            style={StyleSheet.absoluteFillObject}
-          />
-        </ImageBackground>
-      );
-    } else {
-      // Use gradient fallback
-      const gradientColors = backgroundData?.url || getFallbackBackground(backgroundData?.prayerPeriod || 'Fajr');
-      return (
-        <LinearGradient
-          colors={gradientColors}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-      );
-    }
-  };
-
   return (
     <View style={styles.container}>
-      {/* Dynamic Background */}
-      {renderBackground()}
+      {/* Rotating Background Image */}
+      <ImageBackground
+        source={backgroundImage}
+        style={StyleSheet.absoluteFillObject}
+        resizeMode="cover"
+        imageStyle={{ opacity: 0.8 }}
+      >
+        {/* Dark green overlay gradient */}
+        <LinearGradient
+          colors={['rgba(0, 64, 32, 0.55)', 'rgba(10, 79, 63, 0.65)', 'rgba(20, 90, 50, 0.75)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </ImageBackground>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -329,15 +325,6 @@ const HomeScreen = ({ navigation }) => {
           </LinearGradient>
         </MotiView>
 
-        {/* Photo Credit (if from Unsplash) */}
-        {backgroundData && backgroundData.photographer && !backgroundData.isFallback && (
-          <View style={styles.photoCredit}>
-            <Text style={styles.photoCreditText}>
-              Photo by {backgroundData.photographer} on Unsplash
-            </Text>
-          </View>
-        )}
-
         <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
@@ -347,12 +334,12 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.primary,
   },
   loadingText: {
     marginTop: spacing.md,
@@ -360,6 +347,8 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   scrollContent: {
+    position: 'relative',
+    zIndex: 1,
     paddingTop: 60,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
@@ -554,17 +543,6 @@ const styles = StyleSheet.create({
     color: colors.gold,
     textAlign: 'center',
     fontWeight: '600',
-  },
-
-  // Photo Credit
-  photoCredit: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  photoCreditText: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
   },
 
   bottomSpace: {
