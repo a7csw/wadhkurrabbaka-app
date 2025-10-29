@@ -324,3 +324,4 @@ reminderSchema.methods.acknowledge = function() {
 };
 
 module.exports = mongoose.model('Reminder', reminderSchema);
+

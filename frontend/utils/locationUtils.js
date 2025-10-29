@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { saveLastLocation, getLastLocation } from './storage';
+import { API_KEYS, API_URLS } from '../config/api';
 
 export const requestLocationPermission = async () => {
   try {
@@ -102,4 +103,91 @@ export const getCityName = async (latitude, longitude) => {
     return 'Unknown Location';
   }
 };
+
+/**
+ * Get detailed city and country from coordinates using OpenCage API
+ * @param {number} latitude - User latitude
+ * @param {number} longitude - User longitude
+ * @returns {Promise<{city: string, country: string, formatted: string}>}
+ */
+export const getCityFromCoordinates = async (latitude, longitude) => {
+  try {
+    // First, try OpenCage API for more detailed results
+    if (API_KEYS.OPENCAGE) {
+      const url = `${API_URLS.OPENCAGE}/json?q=${latitude}+${longitude}&key=${API_KEYS.OPENCAGE}&language=en&pretty=1`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        const result = data.results[0];
+        const components = result.components;
+        
+        // Extract city (try multiple possible fields)
+        const city = components.city 
+          || components.town 
+          || components.village 
+          || components.county 
+          || components.state_district 
+          || components.state 
+          || 'Unknown';
+        
+        // Extract country
+        const country = components.country || 'Unknown';
+        
+        // Full formatted address
+        const formatted = result.formatted || `${city}, ${country}`;
+        
+        return {
+          city,
+          country,
+          formatted,
+          latitude,
+          longitude,
+        };
+      }
+    }
+    
+    // Fallback to Expo's built-in reverse geocoding
+    const result = await Location.reverseGeocodeAsync({
+      latitude,
+      longitude,
+    });
+
+    if (result && result.length > 0) {
+      const { city, region, country } = result[0];
+      const locationCity = city || region || 'Unknown';
+      const locationCountry = country || 'Unknown';
+      
+      return {
+        city: locationCity,
+        country: locationCountry,
+        formatted: `${locationCity}, ${locationCountry}`,
+        latitude,
+        longitude,
+      };
+    }
+    
+    // Final fallback
+    return {
+      city: 'Unknown',
+      country: 'Unknown',
+      formatted: 'Unknown Location',
+      latitude,
+      longitude,
+    };
+  } catch (error) {
+    console.error('Error getting location details from coordinates:', error);
+    
+    // Return error fallback
+    return {
+      city: 'Unknown',
+      country: 'Unknown',
+      formatted: 'Unknown Location',
+      latitude,
+      longitude,
+    };
+  }
+};
+
 

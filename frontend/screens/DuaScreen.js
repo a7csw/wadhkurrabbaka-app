@@ -84,3 +84,4 @@ const localStyles = StyleSheet.create({
 });
 
 export default DuaScreen;
+

@@ -38,8 +38,10 @@
 ### 🔧 Technical Features
 - **Cross-Platform**: iOS and Android support
 - **Offline Capable**: Core features work without internet
-- **Location Services**: Automatic prayer time calculation
+- **Location Services**: GPS-based prayer times and location detection
+- **Reverse Geocoding**: OpenCage API for accurate city/country names
 - **Push Notifications**: Prayer reminders and daily adhkar
+- **Find Mosque**: Opens native maps to locate nearby mosques
 - **User Authentication**: Secure JWT-based login system
 - **Data Persistence**: MongoDB for reliable data storage
 
@@ -52,6 +54,9 @@
 - **Expo Linear Gradient** - Beautiful gradient backgrounds
 - **Expo Location** - GPS and location services
 - **Expo Notifications** - Push notification system
+- **OpenCage API** - Reverse geocoding for location names
+- **Aladhan API** - Accurate Islamic prayer times
+- **Moment.js** - Time calculations and timezone handling
 
 ### Backend
 - **Node.js** - JavaScript runtime environment
@@ -128,9 +133,26 @@ cp .env.example .env
 npx expo start
 ```
 
-### 📸 Unsplash API Setup (Required for Background Photos)
+### 🔑 API Configuration
 
-The app displays beautiful, dynamic photos of the Kaaba and Prophet's Mosque. To enable this feature:
+The app uses several external APIs to provide enhanced functionality:
+
+#### 1. 📍 OpenCage Geocoding API (✅ Pre-configured)
+**Purpose**: Converts GPS coordinates to accurate city and country names
+
+- **Status**: ✅ **Already configured** with API key
+- **Location**: `frontend/config/api.js`
+- **Free Tier**: 2,500 requests/day
+- **Features**: 
+  - Accurate reverse geocoding
+  - Multi-language support
+  - Fallback to Expo's built-in geocoding
+- **Current Key**: `f823f720145748cc99c3a37e2cf41a70`
+
+**No action needed** - The OpenCage API is ready to use!
+
+#### 2. 📸 Unsplash API (Optional - for Background Photos)
+**Purpose**: Displays beautiful photos of Kaaba & Prophet's Mosque
 
 1. **Get a free Unsplash API key:**
    - Visit [https://unsplash.com/developers](https://unsplash.com/developers)
@@ -152,7 +174,24 @@ The app displays beautiful, dynamic photos of the Kaaba and Prophet's Mosque. To
 
 📖 **For detailed setup instructions, see [UNSPLASH_SETUP_GUIDE.md](./UNSPLASH_SETUP_GUIDE.md)**
 
-**Note:** The app works without an API key using gradient fallbacks, but photos enhance the experience significantly!
+**Note:** The app works without an Unsplash key using local rotating backgrounds!
+
+#### 3. 🕌 Aladhan Prayer Times API (✅ No key required)
+**Purpose**: Provides accurate prayer times based on location
+
+- **Status**: ✅ Active (no API key needed)
+- **Endpoint**: `https://api.aladhan.com/v1`
+- **Features**: Fajr, Dhuhr, Asr, Maghrib, Isha times
+- **Free Tier**: Unlimited requests
+
+#### 4. 🌦️ OpenWeatherMap API (Optional - for Weather Notifications)
+**Purpose**: Rain detection for weather-based notifications
+
+- **Status**: ⚠️ Optional (not required)
+- **Get Key**: [https://openweathermap.org/api](https://openweathermap.org/api)
+- **Add to**: `frontend/config/api.js`
+
+**Summary**: Only OpenCage is required, and it's **already configured**! 🎉
 
 ### 🎯 Running the App
 
