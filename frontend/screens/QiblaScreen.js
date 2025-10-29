@@ -19,7 +19,7 @@ import {
   getCurrentLocation,
   calculateQiblaDirection,
   getDistanceToKaaba,
-  getCityName,
+  getCityFromCoordinates,
 } from '../utils/locationUtils';
 
 const QiblaScreen = () => {
@@ -28,7 +28,10 @@ const QiblaScreen = () => {
   const [compassHeading, setCompassHeading] = useState(0);
   const [distance, setDistance] = useState(0);
   const [cityName, setCityName] = useState('');
+  const [countryName, setCountryName] = useState('');
+  const [userCoords, setUserCoords] = useState(null);
   const [subscription, setSubscription] = useState(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   useEffect(() => {
     initializeQibla();
@@ -43,34 +46,65 @@ const QiblaScreen = () => {
   const initializeQibla = async () => {
     try {
       setLoading(true);
+      console.log('🕋 [QiblaScreen] Initializing Qibla direction...');
 
-      // Get location
+      // Get user's current GPS location
+      console.log('📍 [QiblaScreen] Requesting GPS coordinates...');
       const coords = await getCurrentLocation();
-      if (!coords) {
+      
+      // Check if location was obtained
+      if (!coords || !coords.latitude || !coords.longitude) {
+        console.error('❌ [QiblaScreen] No coordinates received from getCurrentLocation()');
+        setPermissionDenied(true);
         Alert.alert(
-          'موقع غير متاح',
-          'يرجى تفعيل خدمات الموقع لتحديد اتجاه القبلة'
+          'Location Required',
+          'Please enable location services to find Qibla direction.\n\nGo to Settings > Privacy > Location Services and enable for this app.',
+          [{ text: 'OK' }]
         );
         setLoading(false);
         return;
       }
 
-      // Calculate Qibla direction
+      // Log the actual coordinates received
+      console.log('✅ [QiblaScreen] GPS Coordinates obtained:');
+      console.log(`   Latitude: ${coords.latitude}`);
+      console.log(`   Longitude: ${coords.longitude}`);
+      
+      // Store coordinates for display
+      setUserCoords(coords);
+
+      // Calculate Qibla direction from user's location
+      console.log('🧭 [QiblaScreen] Calculating Qibla direction...');
       const direction = calculateQiblaDirection(
         coords.latitude,
         coords.longitude
       );
+      console.log(`✅ [QiblaScreen] Qibla bearing: ${direction.toFixed(2)}°`);
       setQiblaDirection(direction);
 
-      // Calculate distance to Kaaba
+      // Calculate distance to Kaaba from user's location
+      console.log('📏 [QiblaScreen] Calculating distance to Kaaba...');
       const dist = getDistanceToKaaba(coords.latitude, coords.longitude);
+      console.log(`✅ [QiblaScreen] Distance to Kaaba: ${dist.toLocaleString()} km`);
       setDistance(dist);
 
-      // Get city name
-      const city = await getCityName(coords.latitude, coords.longitude);
-      setCityName(city);
+      // Get city and country name using OpenCage API
+      console.log('🌍 [QiblaScreen] Fetching location name from OpenCage API...');
+      const locationData = await getCityFromCoordinates(
+        coords.latitude,
+        coords.longitude
+      );
+      
+      console.log('✅ [QiblaScreen] Location data received:');
+      console.log(`   City: ${locationData.city}`);
+      console.log(`   Country: ${locationData.country}`);
+      console.log(`   Formatted: ${locationData.formatted}`);
+      
+      setCityName(locationData.city);
+      setCountryName(locationData.country);
 
-      // Start magnetometer
+      // Start magnetometer for compass functionality
+      console.log('🧲 [QiblaScreen] Starting magnetometer...');
       Magnetometer.setUpdateInterval(100);
       const sub = Magnetometer.addListener((data) => {
         let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
@@ -78,11 +112,29 @@ const QiblaScreen = () => {
         setCompassHeading(angle);
       });
       setSubscription(sub);
+      console.log('✅ [QiblaScreen] Magnetometer started successfully');
+
+      // Final summary log
+      console.log('🎉 [QiblaScreen] Qibla initialization complete!');
+      console.log('═══════════════════════════════════════════');
+      console.log(`📍 Your Location: ${locationData.city}, ${locationData.country}`);
+      console.log(`🌐 Coordinates: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+      console.log(`🧭 Qibla Direction: ${direction.toFixed(1)}°`);
+      console.log(`📏 Distance to Kaaba: ${dist.toLocaleString()} km`);
+      console.log('═══════════════════════════════════════════');
 
       setLoading(false);
+      setPermissionDenied(false);
     } catch (error) {
-      console.error('Error initializing Qibla:', error);
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحديد اتجاه القبلة');
+      console.error('❌ [QiblaScreen] Error initializing Qibla:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      Alert.alert(
+        'Error',
+        `Unable to initialize Qibla direction.\n\nError: ${error.message}\n\nPlease ensure location services are enabled.`,
+        [{ text: 'Retry', onPress: initializeQibla }, { text: 'Cancel' }]
+      );
       setLoading(false);
     }
   };
@@ -118,10 +170,23 @@ const QiblaScreen = () => {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>اتجاه القبلة</Text>
           <Text style={styles.headerSubtitle}>Qibla Direction</Text>
+          
+          {/* Location Display */}
           <View style={styles.locationContainer}>
             <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.locationText}>{cityName}</Text>
+            <View style={styles.locationTextContainer}>
+              <Text style={styles.locationText}>
+                {cityName && countryName ? `${cityName}, ${countryName}` : 'Loading location...'}
+              </Text>
+              {userCoords && (
+                <Text style={styles.coordsText}>
+                  {userCoords.latitude.toFixed(4)}°, {userCoords.longitude.toFixed(4)}°
+                </Text>
+              )}
+            </View>
           </View>
+          
+          {/* Distance Display */}
           <Text style={styles.distanceText}>
             {distance.toLocaleString()} km to Kaaba
           </Text>
@@ -234,15 +299,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.sm,
+    justifyContent: 'center',
   },
   locationIcon: {
     fontSize: 16,
     marginRight: spacing.xs,
   },
+  locationTextContainer: {
+    alignItems: 'center',
+  },
   locationText: {
     fontSize: 15,
     color: '#ffffff',
     fontWeight: '600',
+  },
+  coordsText: {
+    fontSize: 11,
+    color: colors.secondary,
+    marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   distanceText: {
     fontSize: 14,
