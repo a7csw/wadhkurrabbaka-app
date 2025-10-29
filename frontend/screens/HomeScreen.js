@@ -15,6 +15,9 @@ import {
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
+  Linking,
+  Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { View as MotiView } from 'react-native';
@@ -23,6 +26,7 @@ import { colors, spacing, shadows } from '../utils/theme';
 import { fetchPrayerTimes } from '../utils/apiUtils';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
 import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
+import PrayerWidget from '../components/PrayerWidget';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,46 +46,6 @@ const getRotatingBackground = () => {
   return images[index];
 };
 
-/**
- * Prayer Widget Component
- * Shows next prayer, countdown, and location
- */
-const PrayerWidget = ({ prayerTimes, location, nextPrayer }) => {
-  if (!nextPrayer || !location) return null;
-
-  return (
-    <MotiView style={styles.prayerWidget}>
-      <LinearGradient
-        colors={['rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.4)']}
-        style={styles.prayerWidgetGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
-        {/* Next Prayer */}
-        <View style={styles.prayerSection}>
-          <Text style={styles.prayerIcon}>{getPrayerIcon(nextPrayer.name)}</Text>
-          <Text style={styles.prayerNameArabic}>{getPrayerNameInArabic(nextPrayer.name)}</Text>
-          <Text style={styles.prayerNameEnglish}>{nextPrayer.name}</Text>
-        </View>
-
-        {/* Countdown */}
-        <View style={styles.countdownSection}>
-          <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" />
-          <Text style={styles.countdownText}>{nextPrayer.countdown.shortFormatted}</Text>
-        </View>
-
-        {/* Location */}
-        <View style={styles.locationSection}>
-          <MaterialCommunityIcons name="map-marker" size={18} color="#D4AF37" />
-          <Text style={styles.locationText} numberOfLines={1}>
-            {location.city || 'Unknown'}
-          </Text>
-        </View>
-      </LinearGradient>
-    </MotiView>
-  );
-};
-
 const HomeScreen = ({ navigation }) => {
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
@@ -90,7 +54,48 @@ const HomeScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [backgroundImage] = useState(getRotatingBackground());
 
-  // Features list - removed Prayer Times card
+  /**
+   * Handle Find Mosque button press
+   * Opens maps app with nearby mosque search
+   */
+  const handleFindMosque = async () => {
+    try {
+      const currentLoc = await getCurrentLocation();
+      
+      if (!currentLoc) {
+        Alert.alert(
+          'Location Required',
+          'Please enable location access to find nearby mosques.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const { latitude, longitude } = currentLoc;
+      
+      // Determine which map URL to use based on platform
+      let mapUrl;
+      if (Platform.OS === 'ios') {
+        mapUrl = `https://maps.apple.com/?q=mosque&ll=${latitude},${longitude}`;
+      } else {
+        mapUrl = `https://www.google.com/maps/search/mosque/@${latitude},${longitude},15z`;
+      }
+
+      // Check if URL can be opened
+      const canOpen = await Linking.canOpenURL(mapUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(mapUrl);
+      } else {
+        Alert.alert('Error', 'Unable to open maps application.');
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      Alert.alert('Error', 'Failed to find nearby mosques. Please try again.');
+    }
+  };
+
+  // Features list - includes Find Mosque
   const features = [
     {
       id: 1,
@@ -130,6 +135,16 @@ const HomeScreen = ({ navigation }) => {
     },
     {
       id: 5,
+      icon: 'mosque-outline',
+      arabicTitle: 'مسجد قريب',
+      englishTitle: 'Find Mosque',
+      description: 'Nearby Masajid',
+      color: '#C5A55D', // Gold accent
+      screen: null, // Uses custom handler
+      customHandler: handleFindMosque,
+    },
+    {
+      id: 6,
       icon: 'cog-outline',
       arabicTitle: 'إعدادات',
       englishTitle: 'Settings',
@@ -195,7 +210,13 @@ const HomeScreen = ({ navigation }) => {
     <MotiView style={styles.featureCardContainer}>
       <TouchableOpacity
         style={[styles.featureCard, { borderLeftColor: feature.color }]}
-        onPress={() => navigation.navigate(feature.screen)}
+        onPress={() => {
+          if (feature.customHandler) {
+            feature.customHandler();
+          } else if (feature.screen) {
+            navigation.navigate(feature.screen);
+          }
+        }}
         activeOpacity={0.8}
       >
         <LinearGradient
@@ -276,7 +297,6 @@ const HomeScreen = ({ navigation }) => {
         <PrayerWidget
           prayerTimes={prayerTimes}
           location={location}
-          nextPrayer={nextPrayer}
         />
 
         {/* Welcome Card */}
@@ -366,67 +386,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
-  },
-  
-  // Prayer Widget Styles
-  prayerWidget: {
-    marginBottom: spacing.lg,
-    borderRadius: 16,
-    overflow: 'hidden',
-    ...shadows.large,
-  },
-  prayerWidgetGradient: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  prayerSection: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  prayerIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  prayerNameArabic: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  prayerNameEnglish: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  countdownSection: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  countdownText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  locationSection: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 13,
-    color: '#D4AF37',
-    fontWeight: '600',
-    maxWidth: width * 0.25,
   },
 
   // Welcome Card
