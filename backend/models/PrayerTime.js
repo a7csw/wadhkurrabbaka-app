@@ -230,3 +230,6 @@ prayerTimeSchema.methods.getCurrentPrayer = function() {
 
 module.exports = mongoose.model('PrayerTime', prayerTimeSchema);
 
+
+
+

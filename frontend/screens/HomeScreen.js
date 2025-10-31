@@ -27,6 +27,7 @@ import { fetchPrayerTimes } from '../utils/apiUtils';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
 import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
 import PrayerWidget from '../components/PrayerWidget';
+import { API_URLS } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -60,38 +61,50 @@ const HomeScreen = ({ navigation }) => {
    */
   const handleFindMosque = async () => {
     try {
+      console.log('🕌 [HomeScreen] Find Mosque button pressed');
+      
       const currentLoc = await getCurrentLocation();
       
-      if (!currentLoc) {
+      if (!currentLoc || !currentLoc.latitude || !currentLoc.longitude) {
+        console.warn('⚠️ [HomeScreen] Location not available for Find Mosque');
         Alert.alert(
           'Location Required',
-          'Please enable location access to find nearby mosques.',
+          'Please enable location access to find nearby mosques.\n\nGo to Settings > Privacy > Location Services and enable for this app.',
           [{ text: 'OK' }]
         );
         return;
       }
 
       const { latitude, longitude } = currentLoc;
+      console.log(`📍 [HomeScreen] Opening maps for location: ${latitude}, ${longitude}`);
       
       // Determine which map URL to use based on platform
       let mapUrl;
       if (Platform.OS === 'ios') {
+        // iOS: Use Apple Maps
         mapUrl = `https://maps.apple.com/?q=mosque&ll=${latitude},${longitude}`;
+        console.log('🍎 [HomeScreen] Using Apple Maps');
       } else {
-        mapUrl = `https://www.google.com/maps/search/mosque/@${latitude},${longitude},15z`;
+        // Android: Use Google Maps with configured URL
+        mapUrl = `${API_URLS.GOOGLE_MAPS}@${latitude},${longitude},15z`;
+        console.log('🤖 [HomeScreen] Using Google Maps');
       }
+
+      console.log(`🗺️ [HomeScreen] Map URL: ${mapUrl}`);
 
       // Check if URL can be opened
       const canOpen = await Linking.canOpenURL(mapUrl);
       
       if (canOpen) {
+        console.log('✅ [HomeScreen] Opening maps application...');
         await Linking.openURL(mapUrl);
       } else {
-        Alert.alert('Error', 'Unable to open maps application.');
+        console.error('❌ [HomeScreen] Cannot open maps URL');
+        Alert.alert('Error', 'Unable to open maps application. Please ensure you have a maps app installed.');
       }
     } catch (error) {
-      console.error('Error opening maps:', error);
-      Alert.alert('Error', 'Failed to find nearby mosques. Please try again.');
+      console.error('❌ [HomeScreen] Error opening maps:', error);
+      Alert.alert('Error', `Failed to find nearby mosques.\n\nError: ${error.message}`);
     }
   };
 
@@ -160,21 +173,49 @@ const HomeScreen = ({ navigation }) => {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🏠 [HomeScreen] Loading home screen data...');
 
       // Load location and prayer times
+      console.log('📍 [HomeScreen] Fetching current location...');
       const currentLoc = await getCurrentLocation();
-      if (currentLoc) {
-        const city = await getCityFromCoordinates(currentLoc.latitude, currentLoc.longitude);
-        setLocation({ ...currentLoc, city });
-
-        const times = await fetchPrayerTimes(currentLoc.latitude, currentLoc.longitude);
-        setPrayerTimes(times);
+      
+      if (currentLoc && currentLoc.latitude && currentLoc.longitude) {
+        console.log(`✅ [HomeScreen] Location obtained: ${currentLoc.latitude}, ${currentLoc.longitude}`);
         
-        const next = calculateNextPrayer(times);
-        setNextPrayer(next);
+        // Get city and country from coordinates
+        console.log('🌍 [HomeScreen] Fetching city name...');
+        const locationData = await getCityFromCoordinates(currentLoc.latitude, currentLoc.longitude);
+        console.log(`✅ [HomeScreen] Location: ${locationData.city}, ${locationData.country}`);
+        
+        setLocation({
+          ...currentLoc,
+          ...locationData,
+        });
+
+        // Fetch prayer times
+        console.log('🕌 [HomeScreen] Fetching prayer times...');
+        const times = await fetchPrayerTimes(currentLoc.latitude, currentLoc.longitude);
+        
+        if (times) {
+          console.log('✅ [HomeScreen] Prayer times received');
+          setPrayerTimes(times);
+          
+          const next = calculateNextPrayer(times);
+          if (next) {
+            console.log(`⏰ [HomeScreen] Next prayer: ${next.name} at ${next.time}`);
+            setNextPrayer(next);
+          }
+        } else {
+          console.warn('⚠️ [HomeScreen] No prayer times received');
+        }
+
+        console.log('🎉 [HomeScreen] Home screen data loaded successfully');
+      } else {
+        console.warn('⚠️ [HomeScreen] Location not available');
       }
     } catch (error) {
-      console.error('Error loading home screen data:', error);
+      console.error('❌ [HomeScreen] Error loading home screen data:', error);
+      console.error('Error details:', error.message);
     } finally {
       setLoading(false);
     }

@@ -1,38 +1,59 @@
 import axios from 'axios';
+import { API_URLS, API_KEYS } from '../config/api';
 
 // Aladhan Prayer Times API
-const ALADHAN_BASE_URL = 'https://api.aladhan.com/v1';
+const ALADHAN_BASE_URL = API_URLS.ALADHAN;
 
-export const getPrayerTimes = async (latitude, longitude, method = 2) => {
+/**
+ * Fetch prayer times from Aladhan API
+ * @param {number} latitude - User latitude
+ * @param {number} longitude - User longitude
+ * @param {number} method - Calculation method (2 = ISNA default)
+ * @returns {Promise<Object>} Prayer times object
+ */
+export const fetchPrayerTimes = async (latitude, longitude, method = 2) => {
   try {
-    const response = await axios.get(`${ALADHAN_BASE_URL}/timings`, {
-      params: {
-        latitude,
-        longitude,
-        method, // 2 = ISNA (default), 1 = MWL, 3 = Egypt, 4 = Makkah, 5 = Karachi, 7 = Tehran, 8 = Jafari
-      },
-    });
+    console.log(`🕌 [ApiUtils] Fetching prayer times for (${latitude}, ${longitude})`);
+    console.log(`   Method: ${method} (2=ISNA, 1=MWL, 3=Egypt, 4=Makkah, 5=Karachi)`);
+    
+    const url = `${ALADHAN_BASE_URL}/timings`;
+    const params = {
+      latitude,
+      longitude,
+      method,
+    };
+    
+    console.log(`📡 [ApiUtils] API Request: ${url}`);
+    const response = await axios.get(url, { params });
 
     if (response.data && response.data.data) {
+      const timings = response.data.data.timings;
+      const date = response.data.data.date;
+      
+      console.log('✅ [ApiUtils] Prayer times received:');
+      console.log(`   Fajr: ${timings.Fajr}`);
+      console.log(`   Dhuhr: ${timings.Dhuhr}`);
+      console.log(`   Asr: ${timings.Asr}`);
+      console.log(`   Maghrib: ${timings.Maghrib}`);
+      console.log(`   Isha: ${timings.Isha}`);
+      console.log(`   Date: ${date.readable}`);
+      
       return {
-        success: true,
-        data: response.data.data.timings,
-        date: response.data.data.date,
+        ...timings,
+        date,
       };
     }
 
-    return {
-      success: false,
-      error: 'No data received',
-    };
+    console.error('❌ [ApiUtils] No prayer times data received');
+    return null;
   } catch (error) {
-    console.error('Error fetching prayer times:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
+    console.error('❌ [ApiUtils] Error fetching prayer times:', error.message);
+    return null;
   }
 };
+
+// Legacy function name for backwards compatibility
+export const getPrayerTimes = fetchPrayerTimes;
 
 export const getMonthPrayerTimes = async (latitude, longitude, month, year, method = 2) => {
   try {
@@ -66,15 +87,14 @@ export const getMonthPrayerTimes = async (latitude, longitude, month, year, meth
   }
 };
 
-// OpenWeatherMap API
-// NOTE: User needs to add their own API key in app.json or here
-const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
-const OPENWEATHER_API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY'; // User will replace this
+// OpenWeatherMap API (Optional)
+const OPENWEATHER_BASE_URL = API_URLS.OPENWEATHER;
+const OPENWEATHER_API_KEY = API_KEYS.OPENWEATHER;
 
 export const getWeatherData = async (latitude, longitude) => {
   try {
-    if (OPENWEATHER_API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
-      console.warn('OpenWeatherMap API key not set');
+    if (!OPENWEATHER_API_KEY) {
+      console.log('ℹ️ [ApiUtils] OpenWeatherMap API key not configured (optional feature)');
       return {
         success: false,
         error: 'API key not configured',
@@ -206,5 +226,8 @@ export const getHijriDate = () => {
     year,
   };
 };
+
+
+
 
 

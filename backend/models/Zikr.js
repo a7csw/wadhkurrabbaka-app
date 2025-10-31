@@ -181,3 +181,6 @@ zikrSchema.methods.incrementRecitation = function() {
 
 module.exports = mongoose.model('Zikr', zikrSchema);
 
+
+
+

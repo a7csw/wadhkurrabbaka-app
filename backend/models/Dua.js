@@ -239,3 +239,6 @@ duaSchema.methods.decrementFavorite = function() {
 
 module.exports = mongoose.model('Dua', duaSchema);
 
+
+
+
