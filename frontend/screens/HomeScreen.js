@@ -27,6 +27,7 @@ import { fetchPrayerTimes } from '../utils/apiUtils';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
 import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
 import PrayerWidget from '../components/PrayerWidget';
+import PrayerTimesWidget from '../components/PrayerTimesWidget';
 import { API_URLS } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
@@ -291,10 +292,12 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.appTitle}>وَاذْكُر رَبَّكَ</Text>
         </MotiView>
 
-        {/* Prayer Widget */}
-        <PrayerWidget
+        {/* Prayer Times Widget */}
+        <PrayerTimesWidget
           prayerTimes={prayerTimes}
-          location={location}
+          location={location ? `${location.city}, ${location.country}` : null}
+          onPress={() => navigation.navigate('PrayerTimes')}
+          loading={loading}
         />
 
         {/* Welcome Card */}
