@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   TASBEEH_COUNT: '@tasbeeh_count',
   TASBEEH_TARGET: '@tasbeeh_target',
   TASBEEH_TEXT: '@tasbeeh_text',
+  GARDEN_TREES: '@garden_trees',
   FAVORITE_ADHKAR: '@favorite_adhkar',
   FAVORITE_DUAS: '@favorite_duas',
   NOTIFICATIONS_ENABLED: '@notifications_enabled',
@@ -61,6 +62,41 @@ export const getTasbeehText = async () => {
   } catch (error) {
     console.error('Error getting Tasbeeh text:', error);
     return 'سُبْحَانَ اللهِ';
+  }
+};
+
+// Garden Trees Storage
+export const saveGardenTrees = async (trees) => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.GARDEN_TREES, trees.toString());
+    console.log(`🌳 [Storage] Saved ${trees} trees to garden`);
+    return true;
+  } catch (error) {
+    console.error('Error saving garden trees:', error);
+    return false;
+  }
+};
+
+export const getGardenTrees = async () => {
+  try {
+    const trees = await AsyncStorage.getItem(STORAGE_KEYS.GARDEN_TREES);
+    const count = trees ? parseInt(trees, 10) : 0;
+    console.log(`🌳 [Storage] Retrieved ${count} trees from garden`);
+    return count;
+  } catch (error) {
+    console.error('Error getting garden trees:', error);
+    return 0;
+  }
+};
+
+export const resetGardenTrees = async () => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.GARDEN_TREES, '0');
+    console.log('🌳 [Storage] Garden trees reset to 0');
+    return true;
+  } catch (error) {
+    console.error('Error resetting garden trees:', error);
+    return false;
   }
 };
 

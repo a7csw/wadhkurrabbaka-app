@@ -23,6 +23,7 @@ import DuasDetailScreen from './screens/DuasDetailScreen';
 import PrayerTimesScreen from './screens/PrayerTimesScreen';
 import QiblaScreen from './screens/QiblaScreen';
 import TasbeehScreen from './screens/TasbeehScreen';
+import GardenScreen from './screens/GardenScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
 // Import theme
@@ -113,6 +114,14 @@ export default function App() {
             component={TasbeehScreen}
             options={{ 
               title: 'تسبيح - Tasbeeh',
+            }}
+          />
+          
+          <Stack.Screen 
+            name="Garden" 
+            component={GardenScreen}
+            options={{ 
+              title: '🌳 حديقة الذكر - Dhikr Garden',
             }}
           />
           
