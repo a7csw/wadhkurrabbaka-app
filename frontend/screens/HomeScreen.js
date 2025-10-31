@@ -57,55 +57,12 @@ const HomeScreen = ({ navigation }) => {
 
   /**
    * Handle Find Mosque button press
-   * Opens maps app with nearby mosque search
+   * Opens in-app Masjid Finder with Google Maps
    */
-  const handleFindMosque = async () => {
-    try {
-      console.log('🕌 [HomeScreen] Find Mosque button pressed');
-      
-      const currentLoc = await getCurrentLocation();
-      
-      if (!currentLoc || !currentLoc.latitude || !currentLoc.longitude) {
-        console.warn('⚠️ [HomeScreen] Location not available for Find Mosque');
-        Alert.alert(
-          'Location Required',
-          'Please enable location access to find nearby mosques.\n\nGo to Settings > Privacy > Location Services and enable for this app.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const { latitude, longitude } = currentLoc;
-      console.log(`📍 [HomeScreen] Opening maps for location: ${latitude}, ${longitude}`);
-      
-      // Determine which map URL to use based on platform
-      let mapUrl;
-      if (Platform.OS === 'ios') {
-        // iOS: Use Apple Maps
-        mapUrl = `https://maps.apple.com/?q=mosque&ll=${latitude},${longitude}`;
-        console.log('🍎 [HomeScreen] Using Apple Maps');
-      } else {
-        // Android: Use Google Maps with configured URL
-        mapUrl = `${API_URLS.GOOGLE_MAPS}@${latitude},${longitude},15z`;
-        console.log('🤖 [HomeScreen] Using Google Maps');
-      }
-
-      console.log(`🗺️ [HomeScreen] Map URL: ${mapUrl}`);
-
-      // Check if URL can be opened
-      const canOpen = await Linking.canOpenURL(mapUrl);
-      
-      if (canOpen) {
-        console.log('✅ [HomeScreen] Opening maps application...');
-        await Linking.openURL(mapUrl);
-      } else {
-        console.error('❌ [HomeScreen] Cannot open maps URL');
-        Alert.alert('Error', 'Unable to open maps application. Please ensure you have a maps app installed.');
-      }
-    } catch (error) {
-      console.error('❌ [HomeScreen] Error opening maps:', error);
-      Alert.alert('Error', `Failed to find nearby mosques.\n\nError: ${error.message}`);
-    }
+  const handleFindMosque = () => {
+    console.log('🕌 [HomeScreen] Find Mosque button pressed');
+    console.log('🗺️ [HomeScreen] Navigating to MasjidFinder screen...');
+    navigation.navigate('MasjidFinder');
   };
 
   // Features list - includes Find Mosque

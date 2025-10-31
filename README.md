@@ -19,9 +19,10 @@
 - **🕌 Adhkar**: Daily remembrance and dhikr with beautiful Arabic typography
 - **🤲 Duas**: Comprehensive collection of Islamic supplications
 - **🕐 Prayer Times**: Accurate prayer times based on your location with live countdown widget
-- **🧭 Qibla**: Precise compass direction to Mecca
-- **📿 Tasbeeh**: Digital prayer counter with customizable beads
-- **⚙️ Settings**: User preferences and theme customization
+- **🧭 Qibla**: Precise compass direction to Mecca with real-time magnetometer
+- **📿 Tasbeeh**: Digital prayer counter with customizable dhikr and gamified garden
+- **🗺️ Masjid Finder**: In-app Google Maps integration to find nearby mosques
+- **⚙️ Settings**: User preferences and notification management
 
 ### 🎨 Premium Design
 - **📸 Dynamic Backgrounds**: Real photos of Kaaba & Prophet's Mosque from Unsplash
@@ -40,10 +41,11 @@
 - **Offline Capable**: Core features work without internet
 - **Location Services**: GPS-based prayer times and location detection
 - **Reverse Geocoding**: OpenCage API for accurate city/country names
+- **Google Maps Integration**: In-app interactive maps with nearby mosque search
+- **Google Places API**: Real-time mosque data with distance calculation
 - **Push Notifications**: Prayer reminders and daily adhkar
-- **Find Mosque**: Opens native maps to locate nearby mosques
-- **User Authentication**: Secure JWT-based login system
-- **Data Persistence**: MongoDB for reliable data storage
+- **User Authentication**: Secure JWT-based login system (backend)
+- **Data Persistence**: AsyncStorage for local data, MongoDB for cloud sync
 
 ## 🏗️ Tech Stack
 
@@ -51,12 +53,17 @@
 - **React Native (Expo)** - Cross-platform mobile development
 - **React Navigation** - Screen navigation and routing
 - **React Native Paper** - Material Design components
+- **React Native Maps** - Google Maps integration
 - **Expo Linear Gradient** - Beautiful gradient backgrounds
 - **Expo Location** - GPS and location services
 - **Expo Notifications** - Push notification system
+- **Expo Sensors** - Magnetometer for Qibla compass
 - **OpenCage API** - Reverse geocoding for location names
+- **Google Maps API** - Interactive map display
+- **Google Places API** - Nearby mosque search
 - **Aladhan API** - Accurate Islamic prayer times
 - **Moment.js** - Time calculations and timezone handling
+- **AsyncStorage** - Local data persistence
 
 ### Backend
 - **Node.js** - JavaScript runtime environment
@@ -184,14 +191,49 @@ The app uses several external APIs to provide enhanced functionality:
 - **Features**: Fajr, Dhuhr, Asr, Maghrib, Isha times
 - **Free Tier**: Unlimited requests
 
-#### 4. 🌦️ OpenWeatherMap API (Optional - for Weather Notifications)
+#### 4. 🗺️ Google Maps API (Required for Masjid Finder)
+**Purpose**: In-app interactive maps to find nearby mosques
+
+1. **Get Google Maps API key:**
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing
+   - Enable: **Maps SDK for iOS** and **Maps SDK for Android**
+   - Create credentials → API Key
+   - Copy your key
+
+2. **Add the API key to `.env`:**
+   ```bash
+   cd frontend
+   # Edit .env file
+   GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+   ```
+
+3. **Add to `app.json`:**
+   - Update `ios.config.googleMapsApiKey`
+   - Update `android.config.googleMaps.apiKey`
+
+📖 **For detailed setup, see [MASJID_FINDER_SETUP.md](./MASJID_FINDER_SETUP.md)**
+
+#### 5. 🕌 Google Places API (Required for Masjid Finder)
+**Purpose**: Search for nearby mosques with accurate data
+
+1. **Enable Places API** in the same Google Cloud project
+2. **Create another API key** (or use the same one)
+3. **Add to `.env`:**
+   ```bash
+   GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
+   ```
+
+**Free Tier**: ~40,000 requests/month
+
+#### 6. 🌦️ OpenWeatherMap API (Optional - for Weather Notifications)
 **Purpose**: Rain detection for weather-based notifications
 
 - **Status**: ⚠️ Optional (not required)
 - **Get Key**: [https://openweathermap.org/api](https://openweathermap.org/api)
 - **Add to**: `frontend/config/api.js`
 
-**Summary**: Only OpenCage is required, and it's **already configured**! 🎉
+**Summary**: OpenCage is pre-configured. Add Google Maps/Places for Masjid Finder! 🕌
 
 ### 🎯 Running the App
 

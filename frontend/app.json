@@ -38,6 +38,9 @@
         "NSLocationWhenInUseUsageDescription": "This app needs access to your location to calculate prayer times and Qibla direction.",
         "NSLocationAlwaysUsageDescription": "This app needs access to your location to provide accurate prayer times.",
         "NSMotionUsageDescription": "This app needs access to motion sensors for the Qibla compass feature."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyDummy_Key_Replace_With_Real_Key"
       }
     },
     "android": {
@@ -55,7 +58,12 @@
         "SCHEDULE_EXACT_ALARM",
         "POST_NOTIFICATIONS",
         "VIBRATE"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummy_Key_Replace_With_Real_Key"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

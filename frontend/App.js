@@ -24,6 +24,7 @@ import PrayerTimesScreen from './screens/PrayerTimesScreen';
 import QiblaScreen from './screens/QiblaScreen';
 import TasbeehScreen from './screens/TasbeehScreen';
 import GardenScreen from './screens/GardenScreen';
+import MasjidFinderScreen from './screens/MasjidFinderScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
 // Import theme
@@ -122,6 +123,14 @@ export default function App() {
             component={GardenScreen}
             options={{ 
               title: '🌳 حديقة الذكر - Dhikr Garden',
+            }}
+          />
+          
+          <Stack.Screen 
+            name="MasjidFinder" 
+            component={MasjidFinderScreen}
+            options={{ 
+              headerShown: false, // Custom header in screen
             }}
           />
           

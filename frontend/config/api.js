@@ -26,6 +26,12 @@ export const API_KEYS = {
   
   // OpenWeatherMap API - for weather notifications (optional)
   OPENWEATHER: envVars.OPENWEATHER_API_KEY || null,
+  
+  // Google Maps API - for maps display (Note: Add your key in .env)
+  GOOGLE_MAPS: envVars.GOOGLE_MAPS_API_KEY || 'AIzaSyDummy_Key_Replace_With_Real_Key',
+  
+  // Google Places API - for finding nearby mosques
+  GOOGLE_PLACES: envVars.GOOGLE_PLACES_API_KEY || 'AIzaSyDummy_Key_Replace_With_Real_Key',
 };
 
 export const API_URLS = {
@@ -33,6 +39,7 @@ export const API_URLS = {
   ALADHAN: envVars.ALADHAN_API || 'https://api.aladhan.com/v1',
   OPENWEATHER: 'https://api.openweathermap.org/data/2.5',
   GOOGLE_MAPS: envVars.GOOGLE_MAPS_URL || 'https://www.google.com/maps/search/mosque/',
+  GOOGLE_PLACES: 'https://maps.googleapis.com/maps/api/place/nearbysearch/json',
 };
 
 console.log('🔑 [API Config] Configuration loaded:');
