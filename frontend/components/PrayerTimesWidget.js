@@ -242,41 +242,51 @@ const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
 };
 
 const styles = StyleSheet.create({
+  // REFINED: Widget container - centered with 90% width
   container: {
-    width: width - spacing.lg * 2,
-    marginHorizontal: spacing.lg,
+    width: '90%', // Changed from fixed width for better centering
+    alignSelf: 'center', // Centers horizontally
     marginVertical: spacing.md,
     borderRadius: 20,
     overflow: 'hidden',
-    ...shadows.large,
+    // Enhanced shadow for card depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   touchable: {
     width: '100%',
   },
+  // REFINED: Consistent padding for internal content
   gradient: {
-    padding: spacing.lg,
+    paddingVertical: 12, // Consistent vertical padding
+    paddingHorizontal: 16, // Consistent horizontal padding
   },
 
-  // Header
+  // REFINED: Header - improved alignment and spacing
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center', // Ensures vertical center alignment
     marginBottom: spacing.md,
   },
   headerLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center', // Vertically centers icon + text
     gap: spacing.xs,
   },
+  // REFINED: Title hierarchy - consistent colors
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '700', // Bolder for Arabic
+    color: '#FFFFFF', // Pure white for Arabic
   },
   headerTitleEn: {
     fontSize: 12,
-    color: colors.secondary,
+    fontWeight: '500',
+    color: '#E0E0E0', // Slightly muted for English
     marginLeft: spacing.xs,
   },
   locationBadge: {
@@ -320,22 +330,29 @@ const styles = StyleSheet.create({
   prayerIcon: {
     fontSize: 20,
     marginBottom: spacing.xs,
+    textAlign: 'center', // Center icon
   },
+  // REFINED: Prayer names - improved typography and alignment
   prayerNameAr: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 18, // Increased from 13 for better readability
+    fontWeight: '700', // Bolder
+    color: '#FFFFFF', // Pure white
     marginBottom: 2,
+    textAlign: 'center', // Center Arabic text
   },
   prayerNameEn: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12, // Increased from 9 for readability
+    fontWeight: '500',
+    color: '#E0E0E0', // Consistent with header English
     marginBottom: spacing.xs,
+    textAlign: 'center', // Center English text
   },
+  // REFINED: Prayer time - gold color for emphasis
   prayerTime: {
-    fontSize: 11,
+    fontSize: 16, // Increased from 11 for prominence
     fontWeight: '600',
-    color: colors.secondary,
+    color: '#FFD700', // Gold color for times
+    textAlign: 'center', // Center time text
   },
   nextPrayerText: {
     color: colors.secondary,
@@ -373,36 +390,43 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Countdown Section
+  // REFINED: Countdown Section - perfectly centered with consistent spacing
   countdownSection: {
     backgroundColor: 'rgba(0,0,0,0.2)',
     borderRadius: 16,
-    padding: spacing.md,
-    alignItems: 'center',
+    paddingVertical: 12, // Consistent vertical padding
+    paddingHorizontal: 16, // Consistent horizontal padding
+    alignItems: 'center', // Center all content
+    marginTop: 10, // Even spacing from prayer grid
   },
   countdownHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // Center the header content
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },
   countdownLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#FFFFFF',
+    textAlign: 'center', // Center text
   },
+  // REFINED: Countdown timer - monospace with subtle pulse
   countdownTime: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: colors.secondary,
+    color: '#FFD700', // Gold for prominence
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     letterSpacing: 2,
     marginVertical: spacing.xs,
+    textAlign: 'center', // Center timer
   },
   countdownSubtext: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#E0E0E0', // Consistent muted color
     marginBottom: spacing.sm,
+    textAlign: 'center', // Center subtext
   },
 
   // Progress Bar

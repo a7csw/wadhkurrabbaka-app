@@ -12,13 +12,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, shadows } from '../utils/theme';
-import { getCurrentLocation, getCityName } from '../utils/locationUtils';
-import { getPrayerTimes, getNextPrayer } from '../utils/apiUtils';
-import { saveLastLocation } from '../utils/storage';
+import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
+import { fetchPrayerTimes } from '../utils/apiUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PrayerTimesScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -28,57 +29,153 @@ const PrayerTimesScreen = () => {
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
   const [hijriDate, setHijriDate] = useState('');
+  const [error, setError] = useState(null); // ADDED: Error state
+  const [retryCount, setRetryCount] = useState(0); // ADDED: Retry counter
 
   useEffect(() => {
     loadPrayerTimes();
   }, []);
 
-  const loadPrayerTimes = async () => {
+  // REFINED: Load prayer times with retry logic and better error handling
+  const loadPrayerTimes = async (isRetry = false) => {
     try {
+      console.log('🕌 [PrayerTimesScreen] Loading prayer times...');
       setLoading(true);
+      setError(null); // Clear previous errors
 
-      // Get current location
+      // Step 1: Try to load cached data first (fallback)
+      const cachedData = await AsyncStorage.getItem('lastPrayerTimes');
+      if (cachedData && !isRetry) {
+        const cached = JSON.parse(cachedData);
+        console.log('✅ [PrayerTimesScreen] Loaded cached data');
+        setPrayerTimes(cached.prayerTimes);
+        setCityName(cached.cityName || 'Cached Location');
+      }
+
+      // Step 2: Get current location
+      console.log('📍 [PrayerTimesScreen] Getting location...');
       const coords = await getCurrentLocation();
-      if (!coords) {
-        Alert.alert(
-          'موقع غير متاح',
-          'يرجى تفعيل خدمات الموقع لعرض أوقات الصلاة'
-        );
+      
+      if (!coords || !coords.latitude || !coords.longitude) {
+        console.warn('⚠️ [PrayerTimesScreen] Location not available');
+        setError({
+          title: 'موقع غير متاح',
+          message: 'يرجى تفعيل خدمات الموقع لعرض أوقات الصلاة',
+          messageEn: 'Please enable location services to view prayer times',
+        });
         setLoading(false);
         return;
       }
 
+      console.log(`✅ [PrayerTimesScreen] Location: ${coords.latitude}, ${coords.longitude}`);
       setLocation(coords);
-      await saveLastLocation(coords);
 
-      // Get city name
-      const city = await getCityName(coords.latitude, coords.longitude);
-      setCityName(city);
+      // Step 3: Get city name using OpenCage
+      console.log('🌍 [PrayerTimesScreen] Fetching city name...');
+      const locationData = await getCityFromCoordinates(coords.latitude, coords.longitude);
+      const cityDisplay = `${locationData.city}, ${locationData.country}`;
+      console.log(`✅ [PrayerTimesScreen] City: ${cityDisplay}`);
+      setCityName(cityDisplay);
 
-      // Fetch prayer times
-      const result = await getPrayerTimes(coords.latitude, coords.longitude);
+      // Step 4: Fetch prayer times from Aladhan API
+      console.log('🕌 [PrayerTimesScreen] Fetching prayer times...');
+      const times = await fetchPrayerTimes(coords.latitude, coords.longitude, 2); // method=2 (ISNA)
       
-      if (result.success) {
-        setPrayerTimes(result.data);
-        setNextPrayer(getNextPrayer(result.data));
-        
-        // Set Hijri date
-        if (result.date && result.date.hijri) {
-          const hijri = result.date.hijri;
-          setHijriDate(
-            `${hijri.day} ${hijri.month.ar} ${hijri.year} هـ`
-          );
-        }
-      } else {
-        Alert.alert('خطأ', 'فشل تحميل أوقات الصلاة. يرجى المحاولة مرة أخرى.');
+      if (!times) {
+        throw new Error('No prayer times returned from API');
       }
 
+      console.log('✅ [PrayerTimesScreen] Prayer times received');
+      setPrayerTimes(times);
+      
+      // Calculate next prayer
+      const next = calculateNextPrayer(times);
+      setNextPrayer(next);
+      
+      // Set Hijri date if available
+      if (times.date && times.date.hijri) {
+        const hijri = times.date.hijri;
+        setHijriDate(`${hijri.day} ${hijri.month.ar} ${hijri.year} هـ`);
+      }
+
+      // Cache the data for offline use
+      await AsyncStorage.setItem('lastPrayerTimes', JSON.stringify({
+        prayerTimes: times,
+        cityName: cityDisplay,
+        timestamp: Date.now(),
+      }));
+      console.log('💾 [PrayerTimesScreen] Data cached successfully');
+
+      setError(null);
+      setRetryCount(0);
       setLoading(false);
+
     } catch (error) {
-      console.error('Error loading prayer times:', error);
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحميل أوقات الصلاة');
+      console.error('❌ [PrayerTimesScreen] Error loading prayer times:', error);
+      console.error('Error details:', error.message);
+      
+      // REFINED: Retry logic - up to 3 attempts
+      if (retryCount < 3) {
+        console.log(`🔄 [PrayerTimesScreen] Retrying... (${retryCount + 1}/3)`);
+        setRetryCount(retryCount + 1);
+        setTimeout(() => loadPrayerTimes(true), 2000); // Wait 2 seconds before retry
+        return;
+      }
+
+      // REFINED: Show in-app error instead of Alert
+      setError({
+        title: '⚠️ لم نتمكن من تحميل الأوقات الآن',
+        message: 'حاول مجددًا لاحقًا',
+        messageEn: 'Unable to fetch prayer times. Please try again later.',
+      });
       setLoading(false);
     }
+  };
+
+  // REFINED: Calculate next prayer (moved from apiUtils for screen-specific logic)
+  const calculateNextPrayer = (times) => {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const prayers = [
+      { name: 'Fajr', nameAr: 'الفجر', time: times.Fajr },
+      { name: 'Dhuhr', nameAr: 'الظهر', time: times.Dhuhr },
+      { name: 'Asr', nameAr: 'العصر', time: times.Asr },
+      { name: 'Maghrib', nameAr: 'المغرب', time: times.Maghrib },
+      { name: 'Isha', nameAr: 'العشاء', time: times.Isha },
+    ];
+
+    for (const prayer of prayers) {
+      const [hours, minutes] = prayer.time.split(':').map(Number);
+      const prayerMinutes = hours * 60 + minutes;
+      
+      if (currentMinutes < prayerMinutes) {
+        const diff = prayerMinutes - currentMinutes;
+        const hoursUntil = Math.floor(diff / 60);
+        const minutesUntil = diff % 60;
+        
+        return {
+          ...prayer,
+          timeUntil: {
+            formatted: `${hoursUntil}h ${minutesUntil}m`,
+          },
+        };
+      }
+    }
+
+    // If no prayer found today, next is Fajr tomorrow
+    const [hours, minutes] = prayers[0].time.split(':').map(Number);
+    const fajrMinutes = hours * 60 + minutes;
+    const diff = (24 * 60 - currentMinutes) + fajrMinutes;
+    const hoursUntil = Math.floor(diff / 60);
+    const minutesUntil = diff % 60;
+
+    return {
+      ...prayers[0],
+      timeUntil: {
+        formatted: `${hoursUntil}h ${minutesUntil}m`,
+      },
+    };
   };
 
   const handleRefresh = async () => {
@@ -122,6 +219,32 @@ const PrayerTimesScreen = () => {
     );
   }
 
+  // REFINED: Error UI component (in-app styled card instead of Alert)
+  const renderError = () => (
+    <View style={styles.errorCard}>
+      <LinearGradient
+        colors={['rgba(255,107,107,0.9)', 'rgba(255,61,61,0.9)']}
+        style={styles.errorGradient}
+      >
+        <MaterialCommunityIcons name="alert-circle" size={48} color="#fff" />
+        <Text style={styles.errorTitle}>{error.title}</Text>
+        <Text style={styles.errorMessage}>{error.message}</Text>
+        <Text style={styles.errorMessageEn}>{error.messageEn}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setRetryCount(0);
+            loadPrayerTimes();
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="reload" size={20} color="#fff" />
+          <Text style={styles.retryButtonText}>حاول مرة أخرى</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -136,6 +259,9 @@ const PrayerTimesScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* REFINED: Show error card if there's an error */}
+        {error && renderError()}
+
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>مواقيت الصلاة</Text>
@@ -171,27 +297,33 @@ const PrayerTimesScreen = () => {
           </View>
         )}
 
-        {/* Prayer Times List */}
+        {/* REFINED: Prayer Times List - with dividers and improved spacing */}
         <View style={styles.prayersList}>
           {prayers.map((prayer, index) => (
-            <View key={prayer.name} style={styles.prayerCard}>
-              <LinearGradient
-                colors={['#ffffff', '#f8f8f8']}
-                style={styles.prayerCardGradient}
-              >
-                <View style={styles.prayerIcon}>
-                  <Text style={styles.prayerIconText}>{prayer.icon}</Text>
-                </View>
-                <View style={styles.prayerInfo}>
-                  <Text style={styles.prayerNameAr}>{prayer.nameAr}</Text>
-                  <Text style={styles.prayerNameEn}>{prayer.name}</Text>
-                </View>
-                <View style={styles.prayerTimeContainer}>
-                  <Text style={styles.prayerTime}>
-                    {formatTime(prayer.time)}
-                  </Text>
-                </View>
-              </LinearGradient>
+            <View key={prayer.name}>
+              <View style={styles.prayerCard}>
+                <LinearGradient
+                  colors={['#ffffff', '#f8f8f8']}
+                  style={styles.prayerCardGradient}
+                >
+                  <View style={styles.prayerIcon}>
+                    <Text style={styles.prayerIconText}>{prayer.icon}</Text>
+                  </View>
+                  <View style={styles.prayerInfo}>
+                    <Text style={styles.prayerNameAr}>{prayer.nameAr}</Text>
+                    <Text style={styles.prayerNameEn}>{prayer.name}</Text>
+                  </View>
+                  <View style={styles.prayerTimeContainer}>
+                    <Text style={styles.prayerTime}>
+                      {formatTime(prayer.time)}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
+              {/* REFINED: Soft divider between prayers (except last) */}
+              {index < prayers.length - 1 && (
+                <View style={styles.prayerDivider} />
+              )}
             </View>
           ))}
         </View>
@@ -321,19 +453,25 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     fontWeight: '600',
   },
+  // REFINED: Prayers list - improved spacing
   prayersList: {
     marginBottom: spacing.lg,
   },
   prayerCard: {
     borderRadius: 12,
-    marginBottom: spacing.sm,
     overflow: 'hidden',
     ...shadows.medium,
   },
   prayerCardGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingVertical: 12, // Consistent vertical spacing
+    paddingHorizontal: 16, // Consistent horizontal spacing
+  },
+  // REFINED: Divider between prayer cards
+  prayerDivider: {
+    height: 10, // Vertical spacing between cards (10-12px as requested)
+    backgroundColor: 'transparent',
   },
   prayerIcon: {
     width: 50,
@@ -418,6 +556,56 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+
+  // REFINED: Error card styles (in-app error UI)
+  errorCard: {
+    borderRadius: 20,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+    ...shadows.large,
+  },
+  errorGradient: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  errorMessage: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  errorMessageEn: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#fff',
   },
 });
 
