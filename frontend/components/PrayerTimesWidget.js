@@ -326,24 +326,27 @@ const styles = StyleSheet.create({
     textAlign: 'right', // Align to right
   },
 
-  // REFINED: Prayer Times Grid - no wrapping, consistent spacing
+  // ENHANCED: Prayer Times Grid - flexible 2-row layout for 6 prayers (includes Shuruq)
   prayersContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around', // Even distribution
     alignItems: 'center',
     marginBottom: spacing.md,
-    flexWrap: 'nowrap', // Prevent cards from wrapping to next line
+    flexWrap: 'wrap', // CHANGED: Allow wrapping for 2 rows if needed
   },
-  // REFINED: Prayer Card - width 18%, responsive padding
+  // ENHANCED: Prayer Card - responsive width for 6 prayers (15% each)
   prayerCard: {
-    width: '18%', // Fixed width for 5 cards with spacing
+    width: '15%', // CHANGED: 15% for 6 cards (90% total with spacing)
+    minWidth: 55, // ADDED: Minimum width for readability
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
-    paddingVertical: 10, // Consistent vertical padding
-    marginHorizontal: 4, // Small horizontal margin between cards
+    paddingVertical: 8, // ADJUSTED: Slightly reduced for more cards
+    paddingHorizontal: 2, // ADDED: Horizontal padding for text spacing
+    marginHorizontal: 3, // ADJUSTED: Smaller margin for tighter layout
+    marginVertical: 4, // ADDED: Vertical margin for 2-row layout
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
+    minHeight: 95, // ADJUSTED: Slightly reduced height
     position: 'relative',
     overflow: 'hidden',
   },
@@ -351,35 +354,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
+  // ENHANCED: Prayer icon - slightly smaller for 6 cards
   prayerIcon: {
-    fontSize: 20,
-    marginBottom: spacing.xs,
-    textAlign: 'center', // Center icon
+    fontSize: 18, // ADJUSTED: Reduced from 20 for more cards
+    marginBottom: 4, // ADJUSTED: Tighter spacing
+    textAlign: 'center',
   },
-  // REFINED: Prayer names - no wrapping, responsive sizing, RTL support
+  // ENHANCED: Prayer names - optimized for 6 cards, responsive sizing
   prayerNameAr: {
-    fontSize: Platform.OS === 'ios' ? 14 : 13, // Responsive font size
-    fontWeight: '700', // Bolder
-    color: '#FFFFFF', // Pure white
-    marginBottom: 2,
-    textAlign: 'center', // Center Arabic text
-    flexShrink: 1, // Allow shrinking if needed
-    writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr', // RTL support
+    fontSize: Platform.OS === 'ios' ? 12 : 11, // ADJUSTED: Smaller for 6 cards
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 1, // ADJUSTED: Tighter spacing
+    textAlign: 'center',
+    flexShrink: 1,
+    writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
   },
   prayerNameEn: {
-    fontSize: Platform.OS === 'ios' ? 11 : 10, // Responsive font size
+    fontSize: Platform.OS === 'ios' ? 9 : 8, // ADJUSTED: Smaller for 6 cards
     fontWeight: '500',
-    color: '#E0E0E0', // Consistent with header English
-    marginBottom: spacing.xs,
-    textAlign: 'center', // Center English text
-    flexShrink: 1, // Allow shrinking if needed
+    color: '#E0E0E0',
+    marginBottom: 3, // ADJUSTED: Tighter spacing
+    textAlign: 'center',
+    flexShrink: 1,
   },
-  // REFINED: Prayer time - gold color for emphasis
+  // ENHANCED: Prayer time - optimized sizing for 6 cards
   prayerTime: {
-    fontSize: 16, // Increased from 11 for prominence
+    fontSize: 13, // ADJUSTED: Reduced from 16 for better fit
     fontWeight: '600',
-    color: '#FFD700', // Gold color for times
-    textAlign: 'center', // Center time text
+    color: '#FFD700',
+    textAlign: 'center',
   },
   nextPrayerText: {
     color: colors.secondary,

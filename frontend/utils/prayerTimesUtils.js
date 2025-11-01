@@ -22,9 +22,10 @@ export const getCurrentAndNextPrayer = (prayerTimes) => {
   const now = new Date();
   const currentTime = now.getHours() * 60 + now.getMinutes();
 
-  // Define prayer order
+  // ENHANCED: Define prayer order - now includes Shuruq (Sunrise)
   const prayers = [
     { name: 'Fajr', nameAr: 'الفجر', time: prayerTimes.Fajr },
+    { name: 'Shuruq', nameAr: 'الشروق', time: prayerTimes.Sunrise }, // ADDED: Sunrise
     { name: 'Dhuhr', nameAr: 'الظهر', time: prayerTimes.Dhuhr },
     { name: 'Asr', nameAr: 'العصر', time: prayerTimes.Asr },
     { name: 'Maghrib', nameAr: 'المغرب', time: prayerTimes.Maghrib },
@@ -138,6 +139,7 @@ export const isNextPrayer = (prayerName, nextPrayer) => {
 export const getPrayerIcon = (prayerName) => {
   const icons = {
     Fajr: '🌅',
+    Shuruq: '🌄', // ADDED: Sunrise icon
     Dhuhr: '☀️',
     Asr: '🌤️',
     Maghrib: '🌇',
