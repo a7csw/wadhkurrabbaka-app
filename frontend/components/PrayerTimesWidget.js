@@ -27,6 +27,16 @@ import {
 
 const { width } = Dimensions.get('window');
 
+// ENHANCED: Helper to split time into digits and period for styled display
+const splitTimeAndPeriod = (formattedTime) => {
+  // formattedTime is like "6:21 AM" or "12:15 PM"
+  const parts = formattedTime.split(' ');
+  return {
+    time: parts[0], // "6:21"
+    period: parts[1], // "AM" or "PM"
+  };
+};
+
 const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
   const [prayerData, setPrayerData] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -191,12 +201,20 @@ const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
                     >
                       {prayer.name}
                     </Text>
-                    <Text 
-                      style={[styles.prayerTime, isNext && styles.nextPrayerTimeText]}
-                      numberOfLines={1}
-                    >
-                      {formatTime12Hour(prayer.time)}
-                    </Text>
+                    {/* ENHANCED: Time display with styled AM/PM suffix */}
+                    <View style={styles.timeContainer}>
+                      <Text 
+                        style={[styles.prayerTime, isNext && styles.nextPrayerTimeText]}
+                        numberOfLines={1}
+                      >
+                        {splitTimeAndPeriod(formatTime12Hour(prayer.time)).time}
+                      </Text>
+                      <Text 
+                        style={[styles.prayerPeriod, isNext && styles.nextPrayerTimeText]}
+                      >
+                        {splitTimeAndPeriod(formatTime12Hour(prayer.time)).period}
+                      </Text>
+                    </View>
                     {isCurrent && (
                       <View style={styles.currentBadge}>
                         <Text style={styles.currentBadgeText}>الآن</Text>
@@ -326,27 +344,27 @@ const styles = StyleSheet.create({
     textAlign: 'right', // Align to right
   },
 
-  // ENHANCED: Prayer Times Grid - flexible 2-row layout for 6 prayers (includes Shuruq)
+  // ENHANCED: Prayer Times Grid - perfect 3×2 layout (3 cards per row)
   prayersContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around', // Even distribution
-    alignItems: 'center',
+    justifyContent: 'space-evenly', // CHANGED: Even spacing for 3×2 grid
+    alignItems: 'flex-start', // CHANGED: Align to top for consistent rows
     marginBottom: spacing.md,
-    flexWrap: 'wrap', // CHANGED: Allow wrapping for 2 rows if needed
+    flexWrap: 'wrap', // Allow wrapping to create 2 rows
   },
-  // ENHANCED: Prayer Card - responsive width for 6 prayers (15% each)
+  // ENHANCED: Prayer Card - 30% width for perfect 3-card rows
   prayerCard: {
-    width: '15%', // CHANGED: 15% for 6 cards (90% total with spacing)
-    minWidth: 55, // ADDED: Minimum width for readability
+    width: '30%', // CHANGED: 30% width = 3 cards per row (90% total)
+    minWidth: 95, // INCREASED: Ensure readability
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
-    paddingVertical: 8, // ADJUSTED: Slightly reduced for more cards
-    paddingHorizontal: 2, // ADDED: Horizontal padding for text spacing
-    marginHorizontal: 3, // ADJUSTED: Smaller margin for tighter layout
-    marginVertical: 4, // ADDED: Vertical margin for 2-row layout
+    paddingVertical: 10, // Consistent vertical padding
+    paddingHorizontal: 4, // Small horizontal padding
+    marginHorizontal: '1.5%', // CHANGED: Percentage-based margins for balance
+    marginVertical: 6, // INCREASED: Better row separation
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 95, // ADJUSTED: Slightly reduced height
+    minHeight: 105, // INCREASED: Comfortable height for all text
     position: 'relative',
     overflow: 'hidden',
   },
@@ -354,36 +372,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
-  // ENHANCED: Prayer icon - slightly smaller for 6 cards
+  // ENHANCED: Prayer icon - balanced for 3×2 grid
   prayerIcon: {
-    fontSize: 18, // ADJUSTED: Reduced from 20 for more cards
-    marginBottom: 4, // ADJUSTED: Tighter spacing
+    fontSize: 20, // RESTORED: Comfortable size for 30% width cards
+    marginBottom: 6, // ADJUSTED: Better spacing
     textAlign: 'center',
   },
-  // ENHANCED: Prayer names - optimized for 6 cards, responsive sizing
+  // ENHANCED: Prayer names - optimized for 3×2 grid layout
   prayerNameAr: {
-    fontSize: Platform.OS === 'ios' ? 12 : 11, // ADJUSTED: Smaller for 6 cards
+    fontSize: Platform.OS === 'ios' ? 13 : 12, // ADJUSTED: Balanced for 30% cards
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 1, // ADJUSTED: Tighter spacing
+    marginBottom: 2, // ADJUSTED: Comfortable spacing
     textAlign: 'center',
     flexShrink: 1,
     writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
   },
   prayerNameEn: {
-    fontSize: Platform.OS === 'ios' ? 9 : 8, // ADJUSTED: Smaller for 6 cards
+    fontSize: Platform.OS === 'ios' ? 11 : 10, // ADJUSTED: Balanced for 30% cards
     fontWeight: '500',
     color: '#E0E0E0',
-    marginBottom: 3, // ADJUSTED: Tighter spacing
+    marginBottom: 4, // ADJUSTED: Better spacing before time
     textAlign: 'center',
     flexShrink: 1,
   },
-  // ENHANCED: Prayer time - optimized sizing for 6 cards
+  // ENHANCED: Time container - holds time + AM/PM together
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2, // Small space between time and period
+  },
+  // ENHANCED: Prayer time digits - larger, prominent
   prayerTime: {
-    fontSize: 13, // ADJUSTED: Reduced from 16 for better fit
+    fontSize: Platform.OS === 'ios' ? 15 : 14, // ADJUSTED: Responsive sizing
     fontWeight: '600',
     color: '#FFD700',
     textAlign: 'center',
+  },
+  // ENHANCED: AM/PM period - smaller, 75% scale
+  prayerPeriod: {
+    fontSize: Platform.OS === 'ios' ? 11 : 10, // 75% of time fontSize
+    fontWeight: '500',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginTop: 2, // Slight vertical alignment adjustment
   },
   nextPrayerText: {
     color: colors.secondary,
