@@ -15,6 +15,7 @@ import {
   Platform,
   Linking,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,10 +40,11 @@ const MasjidFinderScreen = ({ navigation }) => {
   const [mosques, setMosques] = useState([]);
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [cityName, setCityName] = useState('');
+  const [fullAddress, setFullAddress] = useState(''); // ADDED: Full formatted address
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState(null); // ADDED: Error state for better UX
-  const [nearestMosque, setNearestMosque] = useState(null); // ADDED: Track nearest mosque
+  const [error, setError] = useState(null);
+  const [nearestMosque, setNearestMosque] = useState(null);
   
   const mapRef = useRef(null);
   const bottomSheetAnim = useRef(new Animated.Value(-300)).current;
@@ -134,10 +136,11 @@ const MasjidFinderScreen = ({ navigation }) => {
       
       setRegion(newRegion);
 
-      // Get city name
+      // Get city name and full address
       const locationData = await getCityFromCoordinates(location.latitude, location.longitude);
-      setCityName(locationData.formatted || locationData.city);
-      console.log(`🌍 [MasjidFinder] City: ${locationData.formatted}`);
+      setCityName(`${locationData.city}, ${locationData.country}`);
+      setFullAddress(locationData.formatted || `${locationData.city}, ${locationData.country}`);
+      console.log(`🌍 [MasjidFinder] Location: ${locationData.formatted}`);
 
       // Fetch nearby mosques
       await fetchNearbyMosques(location.latitude, location.longitude);
@@ -197,15 +200,42 @@ const MasjidFinderScreen = ({ navigation }) => {
         });
         
         setMosques(sortedMosques);
+        setError(null); // Clear any previous errors
       } else {
         console.warn('⚠️ [MasjidFinder] No mosques found in API response');
         setMosques([]);
+        setError({
+          type: 'no_results',
+          message: 'No mosques found nearby',
+          messageAr: 'لم يتم العثور على مساجد قريبة',
+        });
       }
 
       setSearching(false);
     } catch (error) {
       console.error('❌ [MasjidFinder] Error fetching mosques:', error.message);
       console.error('❌ [MasjidFinder] Error details:', error.response?.data || error);
+      
+      // ENHANCED: Better error handling with user-friendly messages
+      if (error.message.includes('timeout')) {
+        setError({
+          type: 'timeout',
+          message: 'Request timed out. Check your internet connection.',
+          messageAr: 'انقطع الاتصال. تحقق من اتصالك بالإنترنت.',
+        });
+      } else if (error.message.includes('Network')) {
+        setError({
+          type: 'network',
+          message: 'No internet connection. Please check your network.',
+          messageAr: 'لا يوجد اتصال بالإنترنت. يرجى التحقق من شبكتك.',
+        });
+      } else {
+        setError({
+          type: 'api_error',
+          message: 'Unable to fetch mosques. Using demo data.',
+          messageAr: 'تعذر جلب المساجد. استخدام بيانات تجريبية.',
+        });
+      }
       
       // Use fallback demo data only if API fails
       console.log('🔄 [MasjidFinder] Using demo mosques as fallback');
@@ -443,12 +473,12 @@ const MasjidFinderScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="arrow-right" size={24} color="#fff" />
             </TouchableOpacity>
             
-            {/* Center: Location Info */}
+            {/* Center: Address Text (full formatted address) */}
             <View style={styles.topCardContent}>
               <MaterialCommunityIcons 
                 name="map-marker" 
-                size={20} 
-                color="#FFD700"
+                size={22} 
+                color="#fff"
                 style={styles.locationIcon}
               />
               <View style={styles.addressContainer}>
@@ -457,27 +487,49 @@ const MasjidFinderScreen = ({ navigation }) => {
                   numberOfLines={2}
                   ellipsizeMode="tail"
                 >
-                  {cityName || 'Finding location...'}
+                  {fullAddress || cityName || 'Finding location...'}
                 </Text>
-                {!searching && mosques.length > 0 && (
-                  <Text style={styles.mosquesCountSubtext}>
-                    {mosques.length} مساجد قريبة
-                  </Text>
-                )}
               </View>
             </View>
 
-            {/* Right: Mosque Count Badge or Loading */}
+            {/* Right: Compact Mosque Count Badge */}
             {searching ? (
-              <ActivityIndicator size="small" color="#FFD700" />
-            ) : mosques.length > 0 ? (
+              <ActivityIndicator size="small" color="#FFD700" style={styles.loadingIndicator} />
+            ) : (
               <View style={styles.mosqueBadge}>
                 <Text style={styles.mosqueBadgeText}>{mosques.length}</Text>
               </View>
-            ) : null}
+            )}
           </LinearGradient>
         </Animated.View>
       </SafeAreaView>
+
+      {/* ENHANCED: Error Message Card (for no mosques or network issues) */}
+      {error && mosques.length === 0 && !searching && (
+        <Animated.View style={[styles.errorCard, { opacity: fadeAnim }]}>
+          <LinearGradient
+            colors={['rgba(255, 193, 7, 0.95)', 'rgba(255, 152, 0, 0.95)']}
+            style={styles.errorGradient}
+          >
+            <MaterialCommunityIcons name="alert-circle-outline" size={32} color="#fff" />
+            <Text style={styles.errorMessageAr}>{error.messageAr}</Text>
+            <Text style={styles.errorMessageEn}>{error.message}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                setError(null);
+                if (userLocation) {
+                  fetchNearbyMosques(userLocation.latitude, userLocation.longitude);
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="reload" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>إعادة المحاولة</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+      )}
 
       {/* Recenter Button */}
       <TouchableOpacity
@@ -736,6 +788,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0a6b3a',
+  },
+  loadingIndicator: {
+    marginRight: 4,
+  },
+
+  // ENHANCED: Error Message Card
+  errorCard: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 120 : 140,
+    left: spacing.md,
+    right: spacing.md,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...shadows.large,
+  },
+  errorGradient: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  errorMessageAr: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: 4,
+  },
+  errorMessageEn: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    fontStyle: 'italic',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    gap: spacing.xs,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 
   // Recenter Button
