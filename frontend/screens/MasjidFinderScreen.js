@@ -9,13 +9,12 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
-  Alert,
   Animated,
   Dimensions,
   Platform,
   Linking,
+  SafeAreaView,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,12 +41,14 @@ const MasjidFinderScreen = ({ navigation }) => {
   const [cityName, setCityName] = useState('');
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState(null); // ADDED: Error state for better UX
+  const [nearestMosque, setNearestMosque] = useState(null); // ADDED: Track nearest mosque
   
   const mapRef = useRef(null);
   const bottomSheetAnim = useRef(new Animated.Value(-300)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const markerScaleAnim = useRef(new Animated.Value(0)).current; // ADDED: For marker animation
 
   useEffect(() => {
     initializeMap();
@@ -60,6 +61,26 @@ const MasjidFinderScreen = ({ navigation }) => {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  // ADDED: Animate markers when mosques load
+  useEffect(() => {
+    if (mosques.length > 0) {
+      // Find and set nearest mosque
+      if (userLocation) {
+        const nearest = mosques[0]; // Already sorted by distance
+        setNearestMosque(nearest);
+        console.log(`📌 [MasjidFinder] Nearest mosque: ${nearest.name}`);
+      }
+
+      // Animate markers appearing
+      Animated.spring(markerScaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [mosques, userLocation]);
 
   const startPulseAnimation = () => {
     Animated.loop(
@@ -129,7 +150,8 @@ const MasjidFinderScreen = ({ navigation }) => {
     }
   };
 
-  const fetchNearbyMosques = async (lat, lon, radius = 3000) => {
+  // ENHANCED: Fetch nearby mosques with improved API parameters and error handling
+  const fetchNearbyMosques = async (lat, lon, radius = 5000) => {
     try {
       console.log(`🕌 [MasjidFinder] Fetching mosques near (${lat}, ${lon}), radius: ${radius}m`);
       setSearching(true);
@@ -138,31 +160,55 @@ const MasjidFinderScreen = ({ navigation }) => {
       
       if (!apiKey || apiKey.includes('Dummy')) {
         console.warn('⚠️ [MasjidFinder] Google Places API key not configured');
+        console.log('📝 [MasjidFinder] Using demo mosques for testing');
         // Use fallback demo data for testing
         setMosques(generateDemoMosques(lat, lon));
         setSearching(false);
         return;
       }
 
-      const url = `${API_URLS.GOOGLE_PLACES}?location=${lat},${lon}&radius=${radius}&type=mosque&key=${apiKey}`;
+      // ENHANCED: More specific API parameters for better results
+      const params = new URLSearchParams({
+        location: `${lat},${lon}`,
+        radius: radius.toString(),
+        type: 'mosque',
+        keyword: 'mosque masjid', // ADDED: Better keyword matching
+        key: apiKey,
+      });
+
+      const url = `${API_URLS.GOOGLE_PLACES}?${params.toString()}`;
       
       console.log('📡 [MasjidFinder] Calling Google Places API...');
-      const response = await axios.get(url);
+      console.log(`🔗 [MasjidFinder] URL: ${API_URLS.GOOGLE_PLACES}`);
+      
+      const response = await axios.get(url, {
+        timeout: 10000, // 10 second timeout
+      });
 
-      if (response.data.results) {
+      if (response.data && response.data.results && response.data.results.length > 0) {
         console.log(`✅ [MasjidFinder] Found ${response.data.results.length} mosques`);
-        setMosques(response.data.results);
+        console.log(`📍 [MasjidFinder] First mosque: ${response.data.results[0].name}`);
+        
+        // Sort by distance (closest first)
+        const sortedMosques = response.data.results.sort((a, b) => {
+          const distA = calculateDistanceInKm(lat, lon, a.geometry.location.lat, a.geometry.location.lng);
+          const distB = calculateDistanceInKm(lat, lon, b.geometry.location.lat, b.geometry.location.lng);
+          return distA - distB;
+        });
+        
+        setMosques(sortedMosques);
       } else {
-        console.warn('⚠️ [MasjidFinder] No mosques found');
+        console.warn('⚠️ [MasjidFinder] No mosques found in API response');
         setMosques([]);
       }
 
       setSearching(false);
     } catch (error) {
       console.error('❌ [MasjidFinder] Error fetching mosques:', error.message);
+      console.error('❌ [MasjidFinder] Error details:', error.response?.data || error);
       
-      // Use fallback demo data
-      console.log('🔄 [MasjidFinder] Using demo data as fallback');
+      // Use fallback demo data only if API fails
+      console.log('🔄 [MasjidFinder] Using demo mosques as fallback');
       setMosques(generateDemoMosques(lat, lon));
       setSearching(false);
     }
@@ -196,7 +242,8 @@ const MasjidFinderScreen = ({ navigation }) => {
     return demoMosques;
   };
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  // ENHANCED: Calculate distance in km (for sorting)
+  const calculateDistanceInKm = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth's radius in km
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -209,8 +256,12 @@ const MasjidFinderScreen = ({ navigation }) => {
         Math.sin(dLon / 2);
     
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    
+    return R * c; // Returns km as number
+  };
+
+  // ENHANCED: Calculate distance with formatted output
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const distance = calculateDistanceInKm(lat1, lon1, lat2, lon2);
     return distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`;
   };
 
@@ -333,71 +384,100 @@ const MasjidFinderScreen = ({ navigation }) => {
           </>
         )}
 
-        {/* Mosque Markers */}
-        {mosques.map((mosque, index) => (
-          <Marker
-            key={mosque.place_id || `mosque_${index}`}
-            coordinate={{
-              latitude: mosque.geometry.location.lat,
-              longitude: mosque.geometry.location.lng,
-            }}
-            onPress={() => handleMarkerPress(mosque)}
-          >
-            <Animated.View
-              style={[
-                styles.mosqueMarker,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    {
-                      scale: fadeAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
+        {/* ENHANCED: Mosque Markers with animation and nearest highlight */}
+        {mosques.map((mosque, index) => {
+          const isNearest = nearestMosque && mosque.place_id === nearestMosque.place_id;
+          
+          return (
+            <Marker
+              key={mosque.place_id || `mosque_${index}`}
+              coordinate={{
+                latitude: mosque.geometry.location.lat,
+                longitude: mosque.geometry.location.lng,
+              }}
+              onPress={() => handleMarkerPress(mosque)}
             >
-              <LinearGradient
-                colors={['#34A853', '#0F9D58']}
-                style={styles.markerGradient}
+              <Animated.View
+                style={[
+                  isNearest ? styles.mosqueMarkerNearest : styles.mosqueMarker,
+                  {
+                    opacity: markerScaleAnim, // Use marker-specific animation
+                    transform: [
+                      {
+                        scale: markerScaleAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, isNearest ? 1.2 : 1], // Nearest mosque is larger
+                        }),
+                      },
+                    ],
+                  },
+                ]}
               >
-                <Text style={styles.mosqueIcon}>🕌</Text>
-              </LinearGradient>
-            </Animated.View>
-          </Marker>
-        ))}
+                <LinearGradient
+                  colors={isNearest ? ['#FFD700', '#FFA500'] : ['#34A853', '#0F9D58']}
+                  style={styles.markerGradient}
+                >
+                  <Text style={styles.mosqueIcon}>🕌</Text>
+                </LinearGradient>
+              </Animated.View>
+            </Marker>
+          );
+        })}
       </MapView>
 
-      {/* Top Info Card */}
-      <Animated.View style={[styles.topCard, { opacity: fadeAnim }]}>
-        <LinearGradient
-          colors={['rgba(11,61,46,0.95)', 'rgba(20,90,50,0.95)']}
-          style={styles.topCardGradient}
-        >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
+      {/* ENHANCED: Redesigned Top Header Card with SafeAreaView */}
+      <SafeAreaView style={styles.safeArea}>
+        <Animated.View style={[styles.topCard, { opacity: fadeAnim }]}>
+          <LinearGradient
+            colors={['rgba(0,128,64,0.9)', 'rgba(11,61,46,0.9)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.topCardGradient}
           >
-            <MaterialCommunityIcons name="arrow-right" size={24} color="#fff" />
-          </TouchableOpacity>
-          
-          <View style={styles.topCardContent}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#FFD700" />
-            <View style={styles.topCardText}>
-              <Text style={styles.cityName}>{cityName || 'Finding location...'}</Text>
-              <Text style={styles.mosquesCount}>
-                {searching ? 'Searching...' : `${mosques.length} مساجد قريبة`}
-              </Text>
+            {/* Left: Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="arrow-right" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            {/* Center: Location Info */}
+            <View style={styles.topCardContent}>
+              <MaterialCommunityIcons 
+                name="map-marker" 
+                size={20} 
+                color="#FFD700"
+                style={styles.locationIcon}
+              />
+              <View style={styles.addressContainer}>
+                <Text 
+                  style={styles.addressText}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {cityName || 'Finding location...'}
+                </Text>
+                {!searching && mosques.length > 0 && (
+                  <Text style={styles.mosquesCountSubtext}>
+                    {mosques.length} مساجد قريبة
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
 
-          {searching && (
-            <ActivityIndicator size="small" color="#FFD700" style={styles.searchingIndicator} />
-          )}
-        </LinearGradient>
-      </Animated.View>
+            {/* Right: Mosque Count Badge or Loading */}
+            {searching ? (
+              <ActivityIndicator size="small" color="#FFD700" />
+            ) : mosques.length > 0 ? (
+              <View style={styles.mosqueBadge}>
+                <Text style={styles.mosqueBadgeText}>{mosques.length}</Text>
+              </View>
+            ) : null}
+          </LinearGradient>
+        </Animated.View>
+      </SafeAreaView>
 
       {/* Recenter Button */}
       <TouchableOpacity
@@ -483,16 +563,27 @@ const MasjidFinderScreen = ({ navigation }) => {
         </Animated.View>
       )}
 
-      {/* Mosque Count Badge */}
-      <View style={styles.countBadge}>
-        <LinearGradient
-          colors={['rgba(52,168,83,0.95)', 'rgba(15,157,88,0.95)']}
-          style={styles.countBadgeGradient}
-        >
-          <MaterialCommunityIcons name="mosque" size={20} color="#fff" />
-          <Text style={styles.countBadgeText}>{mosques.length}</Text>
-        </LinearGradient>
-      </View>
+      {/* ENHANCED: Error/Empty State Message */}
+      {!loading && !searching && mosques.length === 0 && (
+        <View style={styles.emptyStateCard}>
+          <LinearGradient
+            colors={['rgba(20,90,50,0.95)', 'rgba(11,61,46,0.95)']}
+            style={styles.emptyStateGradient}
+          >
+            <MaterialCommunityIcons name="mosque-outline" size={48} color="#FFD700" />
+            <Text style={styles.emptyStateTitle}>لا توجد مساجد قريبة</Text>
+            <Text style={styles.emptyStateSubtitle}>No mosques found nearby</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => fetchNearbyMosques(userLocation.latitude, userLocation.longitude)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="reload" size={20} color="#fff" />
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      )}
     </View>
   );
 };
@@ -543,13 +634,21 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -4 }, { translateY: -4 }],
   },
 
-  // Mosque Marker
+  // ENHANCED: Mosque Markers - regular and nearest
   mosqueMarker: {
     width: 44,
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
     ...shadows.large,
+  },
+  mosqueMarkerNearest: {
+    width: 52, // ADDED: Larger for nearest mosque
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    ...shadows.large,
+    shadowOpacity: 0.4, // Stronger shadow
   },
   markerGradient: {
     width: '100%',
@@ -561,51 +660,82 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
 
-  // Top Card
-  topCard: {
+  // ENHANCED: SafeAreaView for header
+  safeArea: {
     position: 'absolute',
-    top: 50,
-    left: spacing.md,
-    right: spacing.md,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+
+  // ENHANCED: Redesigned Top Card - clean, modern layout
+  topCard: {
+    marginTop: Platform.OS === 'ios' ? 0 : spacing.md,
+    marginHorizontal: spacing.md,
     borderRadius: 16,
     overflow: 'hidden',
-    ...shadows.large,
+    // Enhanced shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   topCardGradient: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Left (back) | Center (address) | Right (badge)
     alignItems: 'center',
-    padding: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14, // Consistent horizontal padding
+    paddingVertical: 10, // Consistent vertical padding
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: spacing.sm,
   },
   topCardContent: {
-    flex: 1,
+    flex: 1, // Take remaining space
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: spacing.md,
+    marginHorizontal: spacing.sm,
   },
-  topCardText: {
-    marginLeft: spacing.sm,
+  locationIcon: {
+    marginRight: 6, // Small gap between icon and text
   },
-  cityName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  addressContainer: {
+    flex: 1, // Allow text to expand and wrap
+  },
+  addressText: {
+    flex: 1,
     color: '#fff',
-  },
-  mosquesCount: {
     fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  mosquesCountSubtext: {
+    fontSize: 11,
     color: '#FFD700',
+    fontWeight: '600',
     marginTop: 2,
   },
-  searchingIndicator: {
-    marginRight: spacing.sm,
+  // ENHANCED: Mosque count badge - white background, green text
+  mosqueBadge: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    minWidth: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mosqueBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0a6b3a',
   },
 
   // Recenter Button
@@ -711,25 +841,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Count Badge
-  countBadge: {
+  // ENHANCED: Empty State Card
+  emptyStateCard: {
     position: 'absolute',
-    top: 130,
-    right: spacing.md,
+    top: '40%',
+    left: spacing.lg,
+    right: spacing.lg,
     borderRadius: 20,
     overflow: 'hidden',
-    ...shadows.medium,
+    ...shadows.large,
   },
-  countBadgeGradient: {
+  emptyStateGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,215,0,0.2)',
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
     gap: spacing.xs,
   },
-  countBadgeText: {
+  retryButtonText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#fff',
   },
 });
