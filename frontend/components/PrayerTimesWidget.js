@@ -12,6 +12,7 @@ import {
   Animated,
   Dimensions,
   Platform,
+  I18nManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -136,7 +137,11 @@ const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
             {location && (
               <View style={styles.locationBadge}>
                 <MaterialCommunityIcons name="map-marker" size={14} color="#fff" />
-                <Text style={styles.locationText} numberOfLines={1}>
+                <Text 
+                  style={styles.locationText} 
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {location}
                 </Text>
               </View>
@@ -172,13 +177,24 @@ const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
                   
                   <View style={styles.prayerContent}>
                     <Text style={styles.prayerIcon}>{getPrayerIcon(prayer.name)}</Text>
-                    <Text style={[styles.prayerNameAr, isNext && styles.nextPrayerText]}>
+                    <Text 
+                      style={[styles.prayerNameAr, isNext && styles.nextPrayerText]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
                       {prayer.nameAr || prayer.name}
                     </Text>
-                    <Text style={[styles.prayerNameEn, isNext && styles.nextPrayerText]}>
+                    <Text 
+                      style={[styles.prayerNameEn, isNext && styles.nextPrayerText]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
                       {prayer.name}
                     </Text>
-                    <Text style={[styles.prayerTime, isNext && styles.nextPrayerTimeText]}>
+                    <Text 
+                      style={[styles.prayerTime, isNext && styles.nextPrayerTimeText]}
+                      numberOfLines={1}
+                    >
                       {formatTime12Hour(prayer.time)}
                     </Text>
                     {isCurrent && (
@@ -242,9 +258,9 @@ const PrayerTimesWidget = ({ prayerTimes, location, onPress, loading }) => {
 };
 
 const styles = StyleSheet.create({
-  // REFINED: Widget container - centered with 90% width
+  // REFINED: Widget container - 92% width to prevent clipping on small screens
   container: {
-    width: '90%', // Changed from fixed width for better centering
+    width: '92%', // Adjusted from 90% to prevent edge clipping
     alignSelf: 'center', // Centers horizontally
     marginVertical: spacing.md,
     borderRadius: 20,
@@ -289,6 +305,7 @@ const styles = StyleSheet.create({
     color: '#E0E0E0', // Slightly muted for English
     marginLeft: spacing.xs,
   },
+  // REFINED: Location badge - flexShrink to prevent overflow
   locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,27 +313,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 12,
-    gap: 4,
-    maxWidth: width * 0.3,
+    marginLeft: 8, // Space between title and location
+    flexShrink: 1, // Allow shrinking to fit long city names
+    overflow: 'hidden', // Prevent text overflow
   },
+  // REFINED: Location text - ellipsis for long city names
   locationText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: 13, // Increased from 11 for readability
+    color: colors.textSecondary, // Use theme color
+    fontWeight: '500',
+    flexShrink: 1, // Allow text to shrink
+    textAlign: 'right', // Align to right
   },
 
-  // Prayer Times Grid
+  // REFINED: Prayer Times Grid - no wrapping, consistent spacing
   prayersContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around', // Even distribution
+    alignItems: 'center',
     marginBottom: spacing.md,
-    gap: spacing.xs,
+    flexWrap: 'nowrap', // Prevent cards from wrapping to next line
   },
+  // REFINED: Prayer Card - width 18%, responsive padding
   prayerCard: {
-    flex: 1,
+    width: '18%', // Fixed width for 5 cards with spacing
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
-    padding: spacing.sm,
+    paddingVertical: 10, // Consistent vertical padding
+    marginHorizontal: 4, // Small horizontal margin between cards
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 100,
@@ -332,20 +356,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textAlign: 'center', // Center icon
   },
-  // REFINED: Prayer names - improved typography and alignment
+  // REFINED: Prayer names - no wrapping, responsive sizing, RTL support
   prayerNameAr: {
-    fontSize: 18, // Increased from 13 for better readability
+    fontSize: Platform.OS === 'ios' ? 14 : 13, // Responsive font size
     fontWeight: '700', // Bolder
     color: '#FFFFFF', // Pure white
     marginBottom: 2,
     textAlign: 'center', // Center Arabic text
+    flexShrink: 1, // Allow shrinking if needed
+    writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr', // RTL support
   },
   prayerNameEn: {
-    fontSize: 12, // Increased from 9 for readability
+    fontSize: Platform.OS === 'ios' ? 11 : 10, // Responsive font size
     fontWeight: '500',
     color: '#E0E0E0', // Consistent with header English
     marginBottom: spacing.xs,
     textAlign: 'center', // Center English text
+    flexShrink: 1, // Allow shrinking if needed
   },
   // REFINED: Prayer time - gold color for emphasis
   prayerTime: {
@@ -390,14 +417,15 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // REFINED: Countdown Section - perfectly centered with consistent spacing
+  // REFINED: Countdown Section - perfectly centered with proper spacing
   countdownSection: {
     backgroundColor: 'rgba(0,0,0,0.2)',
     borderRadius: 16,
     paddingVertical: 12, // Consistent vertical padding
     paddingHorizontal: 16, // Consistent horizontal padding
     alignItems: 'center', // Center all content
-    marginTop: 10, // Even spacing from prayer grid
+    marginTop: spacing.lg, // Increased spacing from prayer grid
+    marginBottom: spacing.md, // Bottom spacing
   },
   countdownHeader: {
     flexDirection: 'row',
