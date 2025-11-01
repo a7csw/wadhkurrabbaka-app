@@ -414,7 +414,7 @@ const MasjidFinderScreen = ({ navigation }) => {
           </>
         )}
 
-        {/* ENHANCED: Mosque Markers with animation and nearest highlight */}
+        {/* REFINED: Mosque Markers - uniform green with golden glow on nearest */}
         {mosques.map((mosque, index) => {
           const isNearest = nearestMosque && mosque.place_id === nearestMosque.place_id;
           
@@ -429,22 +429,31 @@ const MasjidFinderScreen = ({ navigation }) => {
             >
               <Animated.View
                 style={[
-                  isNearest ? styles.mosqueMarkerNearest : styles.mosqueMarker,
+                  styles.mosqueMarker, // Same base size for all (52×52)
+                  isNearest && styles.nearestMosqueGlow, // Add glow only to nearest
                   {
-                    opacity: markerScaleAnim, // Use marker-specific animation
+                    opacity: markerScaleAnim,
                     transform: [
                       {
                         scale: markerScaleAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0, isNearest ? 1.2 : 1], // Nearest mosque is larger
+                          outputRange: [0, 1], // Same scale for all
                         }),
                       },
-                    ],
+                      // REFINED: Gentle pulse only for nearest
+                      isNearest && {
+                        scale: pulseAnim.interpolate({
+                          inputRange: [1, 1.3],
+                          outputRange: [1, 1.08], // Subtle pulse (8%)
+                        }),
+                      },
+                    ].filter(Boolean),
                   },
                 ]}
               >
+                {/* REFINED: All markers use same green gradient */}
                 <LinearGradient
-                  colors={isNearest ? ['#FFD700', '#FFA500'] : ['#34A853', '#0F9D58']}
+                  colors={['#34A853', '#0F9D58']}
                   style={styles.markerGradient}
                 >
                   <Text style={styles.mosqueIcon}>🕌</Text>
@@ -464,13 +473,13 @@ const MasjidFinderScreen = ({ navigation }) => {
             end={{ x: 1, y: 1 }}
             style={styles.topCardGradient}
           >
-            {/* Left: Back Button */}
+            {/* REFINED: Back Button - correct arrow direction (left for back) */}
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="arrow-right" size={24} color="#fff" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
             </TouchableOpacity>
             
             {/* Center: Address Text (full formatted address) */}
@@ -686,21 +695,26 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -4 }, { translateY: -4 }],
   },
 
-  // ENHANCED: Mosque Markers - regular and nearest
+  // REFINED: All mosque markers - uniform size (52×52)
   mosqueMarker: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    ...shadows.large,
-  },
-  mosqueMarkerNearest: {
-    width: 52, // ADDED: Larger for nearest mosque
+    width: 52, // UNIFIED: Same size for all markers
     height: 52,
     borderRadius: 26,
     overflow: 'hidden',
-    ...shadows.large,
-    shadowOpacity: 0.4, // Stronger shadow
+    // Standard shadow for regular mosques
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  // REFINED: Golden glow effect for nearest mosque only
+  nearestMosqueGlow: {
+    shadowColor: '#FFD700', // Golden shadow
+    shadowOffset: { width: 0, height: 0 }, // Glow all around
+    shadowOpacity: 0.8, // Strong glow
+    shadowRadius: 8, // Wide spread
+    elevation: 8, // Higher elevation on Android
   },
   markerGradient: {
     width: '100%',
@@ -741,6 +755,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, // Consistent horizontal padding
     paddingVertical: 10, // Consistent vertical padding
   },
+  // REFINED: Back button - clear visual, proper spacing
   backButton: {
     width: 40,
     height: 40,
@@ -748,6 +763,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 2, // ADDED: Small left margin for balance
   },
   topCardContent: {
     flex: 1, // Take remaining space
