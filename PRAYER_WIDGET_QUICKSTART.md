@@ -320,3 +320,6 @@ Your app is running with the new Prayer Times Widget.
 **Repository**: https://github.com/a7csw/wadhkurrabbaka-app  
 **Location**: Home Screen (top section)
 
+
+
+

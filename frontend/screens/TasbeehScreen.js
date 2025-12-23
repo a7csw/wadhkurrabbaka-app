@@ -1,22 +1,26 @@
 /**
  * Tasbeeh Counter Screen - التسبيح
- * Refined elegant UI with Garden gamification
+ * Full-screen tap interface with haptic feedback
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   Modal,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Svg, { Circle } from 'react-native-svg';
 import { colors, spacing, shadows } from '../utils/theme';
 import {
   getTasbeehCount,
@@ -28,7 +32,9 @@ import {
   saveGardenTrees,
 } from '../utils/storage';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const TasbeehScreen = ({ navigation }) => {
   const [count, setCount] = useState(0);
@@ -38,11 +44,19 @@ const TasbeehScreen = ({ navigation }) => {
   const [tempDhikrText, setTempDhikrText] = useState('');
   const [completedCycles, setCompletedCycles] = useState(0);
   const [gardenTrees, setGardenTrees] = useState(0);
+  const [touchCount, setTouchCount] = useState(0);
   
   // Animation values
-  const fadeAnim = useState(new Animated.Value(0))[0];
-  const scaleAnim = useState(new Animated.Value(0.9))[0];
-  const pulseAnim = useState(new Animated.Value(1))[0];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rippleAnim = useRef(new Animated.Value(0)).current;
+  const rippleOpacity = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  
+  // Refs for gesture detection
+  const longPressTimer = useRef(null);
+  const lastTapTime = useRef(0);
 
   useEffect(() => {
     loadData();
@@ -65,6 +79,14 @@ const TasbeehScreen = ({ navigation }) => {
     saveTasbeehCount(count);
     const cycles = Math.floor(count / target);
     setCompletedCycles(cycles);
+    
+    // Animate progress
+    const progress = (count % target) / target;
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
   }, [count, target]);
 
   const loadData = async () => {
@@ -75,13 +97,45 @@ const TasbeehScreen = ({ navigation }) => {
     setDhikrText(savedText);
     setGardenTrees(trees);
     setCompletedCycles(Math.floor(savedCount / target));
+    
+    // Set initial progress
+    const progress = (savedCount % target) / target;
+    progressAnim.setValue(progress);
   };
 
-  const handleIncrement = async () => {
-    const newCount = count + 1;
+  const showRipple = () => {
+    rippleAnim.setValue(0);
+    rippleOpacity.setValue(1);
+    
+    Animated.parallel([
+      Animated.timing(rippleAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rippleOpacity, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const performIncrement = async (incrementValue = 1) => {
+    const newCount = Math.max(0, count + incrementValue);
     setCount(newCount);
     
-    // Pulse animation on tap
+    // Haptic feedback
+    if (incrementValue > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    
+    // Show ripple animation
+    showRipple();
+    
+    // Pulse animation
     Animated.sequence([
       Animated.timing(pulseAnim, {
         toValue: 1.1,
@@ -96,10 +150,13 @@ const TasbeehScreen = ({ navigation }) => {
     ]).start();
 
     // Check if cycle completed
-    if (newCount % target === 0 && newCount > 0) {
+    if (incrementValue > 0 && newCount % target === 0 && newCount > 0) {
       const newTrees = gardenTrees + 1;
       setGardenTrees(newTrees);
       await saveGardenTrees(newTrees);
+      
+      // Stronger haptic for completion
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // Celebrate cycle completion
       Alert.alert(
@@ -111,6 +168,40 @@ const TasbeehScreen = ({ navigation }) => {
         ]
       );
     }
+  };
+
+  const handlePressIn = (event) => {
+    const touches = event.nativeEvent.touches || [];
+    setTouchCount(touches.length);
+    
+    // Start long press timer
+    longPressTimer.current = setTimeout(() => {
+      performIncrement(5); // Long press adds 5
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }, 500);
+  };
+
+  const handlePressOut = () => {
+    // Clear long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    
+    // Check if it was a quick tap
+    const now = Date.now();
+    if (now - lastTapTime.current < 500) {
+      // Quick tap
+      if (touchCount === 2) {
+        // Two finger tap - decrement
+        performIncrement(-1);
+      } else if (touchCount === 1) {
+        // Single tap - increment
+        performIncrement(1);
+      }
+    }
+    lastTapTime.current = now;
+    setTouchCount(0);
   };
 
   const handleReset = () => {
@@ -126,6 +217,8 @@ const TasbeehScreen = ({ navigation }) => {
             await resetTasbeehCount();
             setCount(0);
             setCompletedCycles(0);
+            progressAnim.setValue(0);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           },
         },
       ]
@@ -145,8 +238,8 @@ const TasbeehScreen = ({ navigation }) => {
     }
   };
 
-  const progress = (count % target) / target;
   const currentCycle = count % target;
+  const circumference = 2 * Math.PI * 90;
 
   const commonDhikr = [
     { text: 'سُبْحَانَ اللَّهِ', translation: 'Glory be to Allah' },
@@ -167,126 +260,149 @@ const TasbeehScreen = ({ navigation }) => {
         end={{ x: 0, y: 1 }}
       />
 
-      <Animated.View 
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
+      {/* Full Screen Pressable Area */}
+      <Pressable
+        style={styles.fullScreenPressable}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        android_disableSound={true}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Tasbeeh counter"
+        accessibilityHint="Double-tap to increment tasbeeh. Long press to add 5. Two-finger tap to undo."
       >
-        {/* Dhikr Text Card */}
-        <TouchableOpacity
-          style={styles.dhikrCard}
-          onPress={handleChangeDhikr}
-          activeOpacity={0.9}
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
         >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)']}
-            style={styles.dhikrGradient}
-          >
-            <Text style={styles.dhikrText}>{dhikrText}</Text>
-            <View style={styles.changeTextContainer}>
-              <MaterialCommunityIcons name="pencil" size={14} color="#FFD700" />
-              <Text style={styles.changeText}>اضغط للتغيير</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Main Counter with Glowing Ring */}
-        <View style={styles.counterSection}>
-          {/* Glowing outer ring */}
-          <View style={[styles.glowRing, { opacity: 0.3 }]} />
-          <View style={[styles.glowRing, { opacity: 0.2, transform: [{ scale: 1.1 }] }]} />
-          
-          {/* Progress ring */}
-          <Animated.View 
-            style={[
-              styles.progressRing,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
-          >
-            <View style={styles.progressTrack}>
-              <View 
-                style={[
-                  styles.progressFill,
-                  { 
-                    width: `${progress * 100}%`,
-                  }
-                ]} 
-              />
-            </View>
-          </Animated.View>
-
-          {/* Counter circle */}
-          <Animated.View 
-            style={[
-              styles.counterCircle,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
+          {/* Dhikr Text Card */}
+          <TouchableOpacity
+            style={styles.dhikrCard}
+            onPress={handleChangeDhikr}
+            activeOpacity={0.9}
           >
             <LinearGradient
-              colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
-              style={styles.counterGradient}
+              colors={['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)']}
+              style={styles.dhikrGradient}
             >
-              <Text style={styles.counterText}>{count}</Text>
-              <Text style={styles.counterLabel}>تسبيحة</Text>
+              <Text style={styles.dhikrText}>{dhikrText}</Text>
+              <View style={styles.changeTextContainer}>
+                <MaterialCommunityIcons name="pencil" size={14} color="#FFD700" />
+                <Text style={styles.changeText}>اضغط للتغيير</Text>
+              </View>
             </LinearGradient>
-          </Animated.View>
-        </View>
+          </TouchableOpacity>
 
-        {/* Cycle Info Cards */}
-        <View style={styles.infoCards}>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>الدورة الحالية</Text>
-            <Text style={styles.infoValue}>{currentCycle} / {target}</Text>
-          </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>الدورات المكتملة</Text>
-            <Text style={styles.infoValue}>{completedCycles}</Text>
-          </View>
-        </View>
+          {/* Main Counter with Progress Ring */}
+          <View style={styles.counterSection}>
+            {/* Ripple Effect */}
+            <Animated.View
+              style={[
+                styles.ripple,
+                {
+                  opacity: rippleOpacity,
+                  transform: [
+                    {
+                      scale: rippleAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.5, 2],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            
+            {/* Progress SVG Ring */}
+            <Svg width={240} height={240} style={styles.progressSvg}>
+              <Circle
+                cx={120}
+                cy={120}
+                r={90}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth={8}
+                fill="none"
+              />
+              <AnimatedCircle
+                cx={120}
+                cy={120}
+                r={90}
+                stroke="#FFD700"
+                strokeWidth={8}
+                fill="none"
+                strokeDasharray={circumference}
+                strokeDashoffset={progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [circumference, 0],
+                })}
+                strokeLinecap="round"
+                transform="rotate(-90 120 120)"
+              />
+            </Svg>
 
-        {/* Main Tasbeeh Button */}
-        <TouchableOpacity
-          style={styles.tasbeehButton}
-          onPress={handleIncrement}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={['#FFD700', '#FFA500', '#FF8C00']}
-            style={styles.tasbeehGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            {/* Counter circle */}
+            <Animated.View 
+              style={[
+                styles.counterCircle,
+                { transform: [{ scale: pulseAnim }] }
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
+                style={styles.counterGradient}
+              >
+                <Text style={styles.counterText}>{count}</Text>
+                <Text style={styles.counterLabel}>تسبيحة</Text>
+              </LinearGradient>
+            </Animated.View>
+          </View>
+
+          {/* Cycle Info Cards */}
+          <View style={styles.infoCards}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoLabel}>الدورة الحالية</Text>
+              <Text style={styles.infoValue}>{currentCycle} / {target}</Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoLabel}>الدورات المكتملة</Text>
+              <Text style={styles.infoValue}>{completedCycles}</Text>
+            </View>
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructions}>
+            <Text style={styles.instructionText}>
+              اضغط في أي مكان للتسبيح • اضغط مطولاً لإضافة 5 • لمسة بإصبعين للتراجع
+            </Text>
+          </View>
+
+          {/* Reset Button */}
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleReset}
+            activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="hand-pointing-up" size={32} color="#fff" />
-            <Text style={styles.tasbeehText}>اضغط للتسبيح</Text>
-            <Text style={styles.tasbeehSubtext}>Press to Tasbeeh</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
+            <Text style={styles.resetText}>إعادة تعيين</Text>
+          </TouchableOpacity>
 
-        {/* Reset Button */}
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={handleReset}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
-          <Text style={styles.resetText}>إعادة تعيين</Text>
-        </TouchableOpacity>
-
-        {/* Motivational Hadith */}
-        <Animated.View style={[styles.hadithCard, { opacity: fadeAnim }]}>
-          <Text style={styles.hadithText}>
-            "كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ"
-          </Text>
-          <Text style={styles.hadithTranslation}>
-            "Two words that are light on the tongue, heavy on the Scale"
-          </Text>
-          <Text style={styles.hadithReference}>— Sahih Bukhari</Text>
+          {/* Motivational Hadith */}
+          <Animated.View style={[styles.hadithCard, { opacity: fadeAnim }]}>
+            <Text style={styles.hadithText}>
+              "كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ"
+            </Text>
+            <Text style={styles.hadithTranslation}>
+              "Two words that are light on the tongue, heavy on the Scale"
+            </Text>
+            <Text style={styles.hadithReference}>— Sahih Bukhari</Text>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </Pressable>
 
       {/* Floating Garden Button */}
       <TouchableOpacity
@@ -378,10 +494,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  fullScreenPressable: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     padding: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xl * 2,
     paddingBottom: 100, // Space for garden button
   },
   
@@ -422,33 +541,15 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xl,
     height: 280,
   },
-  glowRing: {
+  ripple: {
     position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderWidth: 3,
-    borderColor: '#FFD700',
-  },
-  progressRing: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressTrack: {
-    width: '100%',
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: '#FFD700',
-    borderRadius: 4,
+  },
+  progressSvg: {
+    position: 'absolute',
   },
   counterCircle: {
     width: 200,
@@ -478,7 +579,7 @@ const styles = StyleSheet.create({
   infoCards: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     gap: spacing.md,
   },
   infoCard: {
@@ -501,27 +602,18 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Tasbeeh Button
-  tasbeehButton: {
-    borderRadius: 25,
-    overflow: 'hidden',
+  // Instructions
+  instructions: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    padding: spacing.md,
+    borderRadius: 12,
     marginBottom: spacing.md,
-    ...shadows.large,
   },
-  tasbeehGradient: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  tasbeehText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  tasbeehSubtext: {
-    fontSize: 13,
+  instructionText: {
+    fontSize: 12,
     color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 
   // Reset Button
@@ -530,7 +622,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: 16,
     marginBottom: spacing.lg,

@@ -152,7 +152,7 @@ export const getCityFromCoordinates = async (latitude, longitude) => {
     console.log(`🌍 [LocationUtils] Reverse geocoding (${latitude}, ${longitude})`);
     
     // First, try OpenCage API for more detailed results
-    if (API_KEYS.OPENCAGE) {
+    if (API_KEYS.OPENCAGE && !API_KEYS.OPENCAGE.includes('your_') && !API_KEYS.OPENCAGE.includes('Replace_With')) {
       console.log('🔑 [LocationUtils] Using OpenCage API...');
       const url = `${API_URLS.OPENCAGE}/json?q=${latitude}+${longitude}&key=${API_KEYS.OPENCAGE}&language=en&pretty=1`;
       
@@ -196,7 +196,7 @@ export const getCityFromCoordinates = async (latitude, longitude) => {
         console.warn('⚠️ [LocationUtils] OpenCage returned no results');
       }
     } else {
-      console.warn('⚠️ [LocationUtils] OpenCage API key not configured');
+      console.warn('⚠️ [LocationUtils] OpenCage API key missing or invalid. Create .env from env.example and add EXPO_PUBLIC_OPENCAGE_API_KEY');
     }
     
     // Fallback to Expo's built-in reverse geocoding

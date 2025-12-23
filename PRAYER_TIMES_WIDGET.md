@@ -541,3 +541,6 @@ import PrayerTimesWidget from '../components/PrayerTimesWidget';
 **Status**: ✅ Complete & Ready  
 **Location**: Home Screen (below app title)
 
+
+
+

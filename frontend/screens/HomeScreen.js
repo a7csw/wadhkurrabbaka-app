@@ -26,7 +26,6 @@ import { colors, spacing, shadows } from '../utils/theme';
 import { fetchPrayerTimes } from '../utils/apiUtils';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
 import { calculateNextPrayer, getPrayerNameInArabic, getPrayerIcon } from '../utils/prayerWidgetUtils';
-import PrayerWidget from '../components/PrayerWidget';
 import PrayerTimesWidget from '../components/PrayerTimesWidget';
 import { API_URLS } from '../config/api';
 

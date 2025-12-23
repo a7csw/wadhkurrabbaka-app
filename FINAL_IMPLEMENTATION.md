@@ -72,7 +72,7 @@ try {
 }
 
 export const API_KEYS = {
-  OPENCAGE: envVars.OPENCAGE_API_KEY || 'f823f720145748cc99c3a37e2cf41a70',
+  OPENCAGE: envVars.OPENCAGE_API_KEY || 'YOUR_OPENCAGE_KEY_HERE',
   ALADHAN: null,
   OPENWEATHER: envVars.OPENWEATHER_API_KEY || null,
 };
@@ -463,7 +463,7 @@ npx expo start --ios
 
 ### .env Template:
 ```env
-OPENCAGE_API_KEY=f823f720145748cc99c3a37e2cf41a70
+OPENCAGE_API_KEY=YOUR_OPENCAGE_KEY_HERE
 ALADHAN_API=https://api.aladhan.com/v1
 GOOGLE_MAPS_URL=https://www.google.com/maps/search/mosque/
 ```
@@ -509,4 +509,7 @@ When you run the app, you should see:
 All tasks have been implemented, tested, and documented. The app uses real GPS coordinates, fetches data from proper APIs, and has comprehensive logging for easy debugging and verification.
 
 **Ready to test with different locations!** 📍🕌✨
+
+
+
 

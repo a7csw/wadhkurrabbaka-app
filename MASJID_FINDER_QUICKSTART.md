@@ -119,8 +119,8 @@ To get **real nearby mosques**, add Google API keys:
 
 3. **Add this:**
    ```bash
-   GOOGLE_MAPS_API_KEY=your_maps_key_here
-   GOOGLE_PLACES_API_KEY=your_places_key_here
+GOOGLE_MAPS_API_KEY=YOUR_MAPS_KEY_HERE
+GOOGLE_PLACES_API_KEY=YOUR_PLACES_KEY_HERE
    ```
 
 4. **Update `app.json`:**
@@ -337,4 +337,7 @@ Open your iOS simulator and enjoy the new feature.
 **May this feature help Muslims find mosques and establish prayer! 🤲**
 
 *Alhamdulillah!* 🌙
+
+
+
 

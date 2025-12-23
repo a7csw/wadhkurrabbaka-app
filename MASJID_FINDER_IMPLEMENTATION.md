@@ -313,8 +313,8 @@ cd frontend
 nano .env
 
 # Add these lines:
-GOOGLE_MAPS_API_KEY=AIzaSyC_your_maps_key_here
-GOOGLE_PLACES_API_KEY=AIzaSyC_your_places_key_here
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_KEY_HERE
+GOOGLE_PLACES_API_KEY=YOUR_GOOGLE_KEY_HERE
 ```
 
 ### **Step 4: Update `app.json`**
@@ -323,13 +323,13 @@ GOOGLE_PLACES_API_KEY=AIzaSyC_your_places_key_here
   "expo": {
     "ios": {
       "config": {
-        "googleMapsApiKey": "AIzaSyC_your_maps_key_here"
+        "googleMapsApiKey": "YOUR_GOOGLE_KEY_HERE"
       }
     },
     "android": {
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyC_your_maps_key_here"
+          "apiKey": "YOUR_GOOGLE_KEY_HERE"
         }
       }
     }
@@ -530,4 +530,7 @@ Tested: iOS Simulator
 **Next Step**: Test on iOS Simulator with API keys  
 
 🎊 **The Masjid Finder is ready to help Muslims find nearby mosques!** 🕌
+
+
+
 

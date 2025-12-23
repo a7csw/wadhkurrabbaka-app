@@ -47,13 +47,13 @@ Create a `.env` file in the `frontend/` directory:
 
 ```bash
 # Google Maps API Key (for map display)
-GOOGLE_MAPS_API_KEY=AIzaSyC_your_actual_maps_key_here
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_KEY_HERE
 
 # Google Places API Key (for finding mosques)
-GOOGLE_PLACES_API_KEY=AIzaSyC_your_actual_places_key_here
+GOOGLE_PLACES_API_KEY=YOUR_GOOGLE_PLACES_KEY_HERE
 
 # Other existing keys
-OPENCAGE_API_KEY=f823f720145748cc99c3a37e2cf41a70
+OPENCAGE_API_KEY=YOUR_OPENCAGE_KEY_HERE
 ALADHAN_API=https://api.aladhan.com/v1
 ```
 
@@ -66,13 +66,13 @@ Update `frontend/app.json`:
   "expo": {
     "ios": {
       "config": {
-        "googleMapsApiKey": "AIzaSyC_your_actual_maps_key_here"
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_KEY_HERE"
       }
     },
     "android": {
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyC_your_actual_maps_key_here"
+          "apiKey": "YOUR_GOOGLE_MAPS_KEY_HERE"
         }
       }
     }
@@ -315,4 +315,7 @@ If you encounter issues:
 **Status**: ✅ Feature Complete  
 **Last Updated**: October 31, 2025  
 **Version**: 1.0.0
+
+
+
 

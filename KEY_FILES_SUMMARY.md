@@ -13,7 +13,7 @@ Here are the most important files that were modified/created for the final imple
 **Status**: ⚠️ Protected file - Create manually
 
 ```env
-OPENCAGE_API_KEY=f823f720145748cc99c3a37e2cf41a70
+OPENCAGE_API_KEY=YOUR_OPENCAGE_KEY_HERE
 ALADHAN_API=https://api.aladhan.com/v1
 GOOGLE_MAPS_URL=https://www.google.com/maps/search/mosque/
 ```
@@ -71,7 +71,7 @@ try {
 }
 
 export const API_KEYS = {
-  OPENCAGE: envVars.OPENCAGE_API_KEY || 'f823f720145748cc99c3a37e2cf41a70',
+  OPENCAGE: envVars.OPENCAGE_API_KEY || 'YOUR_OPENCAGE_KEY_HERE',
   ALADHAN: null,
   OPENWEATHER: envVars.OPENWEATHER_API_KEY || null,
 };
@@ -499,4 +499,7 @@ All of these should be true:
 **✨ All files are ready for verification!**
 
 See `FINAL_IMPLEMENTATION.md` for complete details.
+
+
+
 

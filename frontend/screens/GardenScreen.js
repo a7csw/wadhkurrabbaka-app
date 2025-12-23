@@ -20,13 +20,13 @@ import { getGardenTrees, getTasbeehCount } from '../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
-const Tree = ({ index, animDelay }) => {
+const Tree = React.memo(({ index, animDelay, timestamp }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0));
   const [swayAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    // Entrance animation
+    // Planting animation
     Animated.sequence([
       Animated.delay(animDelay),
       Animated.parallel([
@@ -44,17 +44,17 @@ const Tree = ({ index, animDelay }) => {
       ]),
     ]).start();
 
-    // Continuous sway animation
+    // Continuous gentle sway
     Animated.loop(
       Animated.sequence([
         Animated.timing(swayAnim, {
           toValue: 1,
-          duration: 2000 + (index % 3) * 500,
+          duration: 3000 + (index % 3) * 500,
           useNativeDriver: true,
         }),
         Animated.timing(swayAnim, {
-          toValue: 0,
-          duration: 2000 + (index % 3) * 500,
+          toValue: -1,
+          duration: 3000 + (index % 3) * 500,
           useNativeDriver: true,
         }),
       ])
@@ -62,32 +62,15 @@ const Tree = ({ index, animDelay }) => {
   }, []);
 
   const rotate = swayAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['-3deg', '3deg'],
+    inputRange: [-1, 1],
+    outputRange: ['-2deg', '2deg'],
   });
-
-  // Random positioning
-  const positions = [
-    { left: '10%', top: '15%' },
-    { left: '30%', top: '25%' },
-    { left: '70%', top: '18%' },
-    { left: '15%', top: '45%' },
-    { left: '55%', top: '40%' },
-    { left: '80%', top: '35%' },
-    { left: '25%', top: '65%' },
-    { left: '65%', top: '60%' },
-    { left: '45%', top: '55%' },
-    { left: '85%', top: '65%' },
-  ];
-
-  const position = positions[index % positions.length];
 
   return (
     <Animated.View
       style={[
-        styles.treeContainer,
+        styles.treeWrapper,
         {
-          ...position,
           opacity: fadeAnim,
           transform: [
             { scale: scaleAnim },
@@ -99,9 +82,9 @@ const Tree = ({ index, animDelay }) => {
       <Text style={styles.treeIcon}>🌳</Text>
     </Animated.View>
   );
-};
+});
 
-const FloatingParticle = ({ delay }) => {
+const FloatingParticle = React.memo(({ delay }) => {
   const [floatAnim] = useState(new Animated.Value(0));
   const [opacity] = useState(new Animated.Value(0));
 
@@ -152,7 +135,7 @@ const FloatingParticle = ({ delay }) => {
       <Text style={styles.particleText}>🌸</Text>
     </Animated.View>
   );
-};
+});
 
 const GardenScreen = ({ navigation }) => {
   const [trees, setTrees] = useState(0);
@@ -215,14 +198,18 @@ const GardenScreen = ({ navigation }) => {
 
     return (
       <View style={styles.gardenContainer}>
-        {/* Render trees */}
-        {Array.from({ length: Math.min(trees, 30) }).map((_, index) => (
-          <Tree key={index} index={index} animDelay={index * 100} />
-        ))}
+        {/* Trees Grid */}
+        <View style={styles.treesGrid}>
+          {Array.from({ length: trees }).map((_, index) => (
+            <View key={index} style={styles.treeCell}>
+              <Tree index={index} animDelay={index * 100} />
+            </View>
+          ))}
+        </View>
         
         {/* Floating particles */}
-        {Array.from({ length: 5 }).map((_, index) => (
-          <FloatingParticle key={`particle-${index}`} delay={index * 1000} />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <FloatingParticle key={`particle-${index}`} delay={index * 2000} />
         ))}
       </View>
     );
@@ -278,15 +265,6 @@ const GardenScreen = ({ navigation }) => {
           colors={['rgba(139,90,43,0.3)', 'rgba(101,67,33,0.5)']}
           style={styles.groundGradient}
         />
-        <View style={styles.grassLine}>
-          <Text style={styles.grass}>🌿</Text>
-          <Text style={styles.grass}>🌿</Text>
-          <Text style={styles.grass}>🌾</Text>
-          <Text style={styles.grass}>🌿</Text>
-          <Text style={styles.grass}>🌿</Text>
-          <Text style={styles.grass}>🌾</Text>
-          <Text style={styles.grass}>🌿</Text>
-        </View>
       </View>
 
       {/* Achievement badges */}
@@ -381,16 +359,27 @@ const styles = StyleSheet.create({
     minHeight: height - 250,
   },
 
-  // Tree
-  treeContainer: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
+  // Trees Grid
+  treesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    justifyContent: 'center',
+  },
+  treeCell: {
+    width: width / 3 - spacing.md,
+    height: width / 3 - spacing.md,
+    padding: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  treeWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   treeIcon: {
-    fontSize: 48,
+    fontSize: 56,
   },
 
   // Floating Particles
@@ -468,16 +457,6 @@ const styles = StyleSheet.create({
   },
   groundGradient: {
     flex: 1,
-  },
-  grassLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  grass: {
-    fontSize: 24,
   },
 
   // Achievement Badges

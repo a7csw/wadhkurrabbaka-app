@@ -16,14 +16,15 @@ import {
   Linking,
   SafeAreaView,
   Alert,
+  I18nManager,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import axios from 'axios';
 import { colors, spacing, shadows } from '../utils/theme';
 import { getCurrentLocation, getCityFromCoordinates } from '../utils/locationUtils';
-import { API_KEYS, API_URLS } from '../config/api';
+import { API_KEYS } from '../config/api';
+import { fetchNearbyMosques } from '../services/googlePlaces';
 
 const { width, height } = Dimensions.get('window');
 
@@ -143,7 +144,7 @@ const MasjidFinderScreen = ({ navigation }) => {
       console.log(`🌍 [MasjidFinder] Location: ${locationData.formatted}`);
 
       // Fetch nearby mosques
-      await fetchNearbyMosques(location.latitude, location.longitude);
+      await fetchNearbyMosquesData(location.latitude, location.longitude);
       
       setLoading(false);
     } catch (error) {
@@ -153,123 +154,98 @@ const MasjidFinderScreen = ({ navigation }) => {
     }
   };
 
-  // ENHANCED: Fetch nearby mosques with improved API parameters and error handling
-  const fetchNearbyMosques = async (lat, lon, radius = 5000) => {
+  // ENHANCED: Fetch nearby mosques using the service
+  const fetchNearbyMosquesData = async (lat, lon) => {
     try {
-      console.log(`🕌 [MasjidFinder] Fetching mosques near (${lat}, ${lon}), radius: ${radius}m`);
+      console.log(`🕌 [MasjidFinder] Fetching mosques near (${lat}, ${lon})`);
       setSearching(true);
+      setError(null);
 
       const apiKey = API_KEYS.GOOGLE_PLACES;
       
-      if (!apiKey || apiKey.includes('Dummy')) {
-        console.warn('⚠️ [MasjidFinder] Google Places API key not configured');
-        console.log('📝 [MasjidFinder] Using demo mosques for testing');
-        // Use fallback demo data for testing
-        setMosques(generateDemoMosques(lat, lon));
+      // Check if API key is available
+      if (!apiKey || apiKey.includes('your_') || apiKey.includes('Replace_With')) {
+        setError({
+          type: 'missing_api_key',
+          message: 'Google API key missing. Create .env from env.example and add EXPO_PUBLIC_GOOGLE_API_KEY.',
+          messageAr: 'مفتاح Google API مفقود. أنشئ ملف .env من env.example وأضف EXPO_PUBLIC_GOOGLE_API_KEY.',
+        });
         setSearching(false);
         return;
       }
-
-      // ENHANCED: More specific API parameters for better results
-      const params = new URLSearchParams({
-        location: `${lat},${lon}`,
-        radius: radius.toString(),
-        type: 'mosque',
-        keyword: 'mosque masjid', // ADDED: Better keyword matching
-        key: apiKey,
+      
+      // Call the service
+      const mosqueData = await fetchNearbyMosques({
+        lat,
+        lon,
+        apiKey,
       });
 
-      const url = `${API_URLS.GOOGLE_PLACES}?${params.toString()}`;
-      
-      console.log('📡 [MasjidFinder] Calling Google Places API...');
-      console.log(`🔗 [MasjidFinder] URL: ${API_URLS.GOOGLE_PLACES}`);
-      
-      const response = await axios.get(url, {
-        timeout: 10000, // 10 second timeout
-      });
-
-      if (response.data && response.data.results && response.data.results.length > 0) {
-        console.log(`✅ [MasjidFinder] Found ${response.data.results.length} mosques`);
-        console.log(`📍 [MasjidFinder] First mosque: ${response.data.results[0].name}`);
+      if (mosqueData && mosqueData.length > 0) {
+        console.log(`✅ [MasjidFinder] Found ${mosqueData.length} mosques`);
         
-        // Sort by distance (closest first)
-        const sortedMosques = response.data.results.sort((a, b) => {
-          const distA = calculateDistanceInKm(lat, lon, a.geometry.location.lat, a.geometry.location.lng);
-          const distB = calculateDistanceInKm(lat, lon, b.geometry.location.lat, b.geometry.location.lng);
-          return distA - distB;
-        });
+        // Convert service data to map format
+        const mapMosques = mosqueData.map(mosque => ({
+          place_id: mosque.id,
+          name: mosque.name,
+          geometry: {
+            location: {
+              lat: mosque.lat,
+              lng: mosque.lon,
+            },
+          },
+          vicinity: mosque.vicinity,
+          distance: mosque.distanceMeters,
+        }));
         
-        setMosques(sortedMosques);
-        setError(null); // Clear any previous errors
+        setMosques(mapMosques);
+        
+        // Check if using demo data
+        if (mosqueData[0].id.startsWith('demo_')) {
+          setError({
+            type: 'demo_mode',
+            message: 'Demo Mode - Add API key for real mosques',
+            messageAr: 'وضع تجريبي - أضف مفتاح API للمساجد الحقيقية',
+          });
+        }
       } else {
-        console.warn('⚠️ [MasjidFinder] No mosques found in API response');
-        setMosques([]);
+        console.warn('⚠️ [MasjidFinder] No mosques found');
         setError({
           type: 'no_results',
           message: 'No mosques found nearby',
           messageAr: 'لم يتم العثور على مساجد قريبة',
         });
+        setMosques([]);
       }
 
       setSearching(false);
     } catch (error) {
-      console.error('❌ [MasjidFinder] Error fetching mosques:', error.message);
-      console.error('❌ [MasjidFinder] Error details:', error.response?.data || error);
+      console.error('❌ [MasjidFinder] Error fetching mosques:', error);
       
-      // ENHANCED: Better error handling with user-friendly messages
-      if (error.message.includes('timeout')) {
-        setError({
+      // Better error messages
+      let errorMsg = {
+        type: 'general',
+        message: 'Failed to load mosques',
+        messageAr: 'فشل تحميل المساجد',
+      };
+      
+      if (error.message?.includes('timeout')) {
+        errorMsg = {
           type: 'timeout',
           message: 'Request timed out. Check your internet connection.',
           messageAr: 'انقطع الاتصال. تحقق من اتصالك بالإنترنت.',
-        });
-      } else if (error.message.includes('Network')) {
-        setError({
+        };
+      } else if (error.message?.includes('Network')) {
+        errorMsg = {
           type: 'network',
           message: 'No internet connection. Please check your network.',
           messageAr: 'لا يوجد اتصال بالإنترنت. يرجى التحقق من شبكتك.',
-        });
-      } else {
-        setError({
-          type: 'api_error',
-          message: 'Unable to fetch mosques. Using demo data.',
-          messageAr: 'تعذر جلب المساجد. استخدام بيانات تجريبية.',
-        });
+        };
       }
       
-      // Use fallback demo data only if API fails
-      console.log('🔄 [MasjidFinder] Using demo mosques as fallback');
-      setMosques(generateDemoMosques(lat, lon));
+      setError(errorMsg);
       setSearching(false);
     }
-  };
-
-  const generateDemoMosques = (lat, lon) => {
-    // Generate some demo mosques nearby for testing
-    const demoMosques = [];
-    const offsets = [
-      { lat: 0.01, lon: 0.01, name: 'Masjid Al-Rahman' },
-      { lat: -0.01, lon: 0.01, name: 'Masjid Al-Noor' },
-      { lat: 0.01, lon: -0.01, name: 'Masjid Al-Taqwa' },
-      { lat: -0.01, lon: -0.01, name: 'Masjid Al-Huda' },
-      { lat: 0.015, lon: 0, name: 'Masjid Al-Iman' },
-    ];
-
-    offsets.forEach((offset, index) => {
-      demoMosques.push({
-        place_id: `demo_${index}`,
-        name: offset.name,
-        geometry: {
-          location: {
-            lat: lat + offset.lat,
-            lng: lon + offset.lon,
-          },
-        },
-        vicinity: 'Demo Location',
-      });
-    });
-
-    return demoMosques;
   };
 
   // ENHANCED: Calculate distance in km (for sorting)
@@ -528,7 +504,7 @@ const MasjidFinderScreen = ({ navigation }) => {
               onPress={() => {
                 setError(null);
                 if (userLocation) {
-                  fetchNearbyMosques(userLocation.latitude, userLocation.longitude);
+                  fetchNearbyMosquesData(userLocation.latitude, userLocation.longitude);
                 }
               }}
               activeOpacity={0.8}
@@ -636,7 +612,7 @@ const MasjidFinderScreen = ({ navigation }) => {
             <Text style={styles.emptyStateSubtitle}>No mosques found nearby</Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => fetchNearbyMosques(userLocation.latitude, userLocation.longitude)}
+              onPress={() => fetchNearbyMosquesData(userLocation.latitude, userLocation.longitude)}
               activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="reload" size={20} color="#fff" />

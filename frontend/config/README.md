@@ -16,7 +16,7 @@ This directory contains `api.js` which stores API keys for external services:
 - **Purpose**: Converts GPS coordinates to city/country names (reverse geocoding)
 - **Usage**: Prayer Widget, location display
 - **Status**: ✅ Configured
-- **API Key**: `f823f720145748cc99c3a37e2cf41a70`
+- **API Key**: `YOUR_OPENCAGE_KEY_HERE`
 - **Website**: https://opencagedata.com/
 - **Free Tier**: 2,500 requests/day
 
@@ -133,6 +133,9 @@ export const API_URLS = {
 
 **Last Updated**: October 29, 2025  
 **Maintainer**: وَاذْكُر رَبَّكَ Team
+
+
+
 
 
 

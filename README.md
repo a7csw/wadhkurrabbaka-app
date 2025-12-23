@@ -47,6 +47,49 @@
 - **User Authentication**: Secure JWT-based login system (backend)
 - **Data Persistence**: AsyncStorage for local data, MongoDB for cloud sync
 
+## 🔑 API Key Setup (Required)
+
+**Important**: The app requires API keys for full functionality. Follow these steps after cloning:
+
+### 1. Copy Environment Template
+```bash
+cd frontend
+cp env.example .env
+```
+
+### 2. Get API Keys & Add to .env
+
+**Required Keys:**
+- **Google API Key** (for Maps & Places - Masjid Finder):
+  - Visit: https://console.cloud.google.com/apis/credentials
+  - Enable: Maps SDK for iOS/Android + Places API
+  - Copy your key to: `EXPO_PUBLIC_GOOGLE_API_KEY`
+
+- **OpenCage Geocoding API** (for location names):
+  - Visit: https://opencagedata.com/api
+  - Free tier: 2,500 requests/day
+  - Copy your key to: `EXPO_PUBLIC_OPENCAGE_API_KEY`
+
+**Optional Keys:**
+- **OpenWeatherMap API** (for weather notifications):
+  - Visit: https://openweathermap.org/api
+  - Copy your key to: `EXPO_PUBLIC_OPENWEATHER_API_KEY`
+
+### 3. Restart App
+```bash
+# Clear cache and restart
+npx expo start --clear
+```
+
+### 4. Update app.json (for native builds)
+Replace placeholders in `app.json`:
+- iOS: `"googleMapsApiKey": "YOUR_GOOGLE_API_KEY"`
+- Android: `"apiKey": "YOUR_GOOGLE_API_KEY"`
+
+**⚠️ Security Note**: Never commit real API keys to GitHub! The `.env` file is ignored by Git.
+
+---
+
 ## 🏗️ Tech Stack
 
 ### Frontend
@@ -154,7 +197,7 @@ The app uses several external APIs to provide enhanced functionality:
   - Accurate reverse geocoding
   - Multi-language support
   - Fallback to Expo's built-in geocoding
-- **Current Key**: `f823f720145748cc99c3a37e2cf41a70`
+- **Current Key**: `YOUR_OPENCAGE_KEY_HERE`
 
 **No action needed** - The OpenCage API is ready to use!
 

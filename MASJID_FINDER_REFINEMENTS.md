@@ -359,7 +359,7 @@ Regular:              Nearest:
 
 2. **Add to `.env`:**
    ```bash
-   GOOGLE_PLACES_API_KEY=your_actual_key_here
+   GOOGLE_PLACES_API_KEY=YOUR_API_KEY_HERE
    ```
 
 3. **Verify in `config/api.js`:**

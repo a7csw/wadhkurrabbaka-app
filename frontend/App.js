@@ -30,13 +30,17 @@ import SettingsScreen from './screens/SettingsScreen';
 // Import theme
 import { islamicTheme } from './utils/theme';
 
+// Import Toast Provider
+import { ToastProvider } from './components/ToastProvider';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <PaperProvider theme={islamicTheme}>
-      <NavigationContainer>
-        <StatusBar style="light" />
+      <ToastProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
         <Stack.Navigator
           initialRouteName="Home"
           screenOptions={{
@@ -143,6 +147,7 @@ export default function App() {
           />
         </Stack.Navigator>
       </NavigationContainer>
+      </ToastProvider>
     </PaperProvider>
   );
 }

@@ -40,7 +40,7 @@
         "NSMotionUsageDescription": "This app needs access to motion sensors for the Qibla compass feature."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyDummy_Key_Replace_With_Real_Key"
+        "googleMapsApiKey": "REPLACE_WITH_GOOGLE_API_KEY"
       }
     },
     "android": {
@@ -61,7 +61,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDummy_Key_Replace_With_Real_Key"
+          "apiKey": "REPLACE_WITH_GOOGLE_API_KEY"
         }
       }
     },

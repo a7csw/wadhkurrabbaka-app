@@ -3,145 +3,169 @@
  * Shows direction to Kaaba with compass
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   ActivityIndicator,
-  Alert,
   Platform,
+  Animated,
+  Easing,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Magnetometer } from 'expo-sensors';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, spacing, shadows } from '../utils/theme';
-import {
-  getCurrentLocation,
-  calculateQiblaDirection,
-  getDistanceToKaaba,
-  getCityFromCoordinates,
-} from '../utils/locationUtils';
+import { useCompass } from '../hooks/useCompass';
+import { KAABA } from '../utils/qibla';
+import { getCityFromCoordinates } from '../utils/locationUtils';
 
 const QiblaScreen = () => {
-  const [loading, setLoading] = useState(true);
-  const [qiblaDirection, setQiblaDirection] = useState(0);
-  const [compassHeading, setCompassHeading] = useState(0);
-  const [distance, setDistance] = useState(0);
-  const [cityName, setCityName] = useState('');
-  const [countryName, setCountryName] = useState('');
-  const [userCoords, setUserCoords] = useState(null);
-  const [subscription, setSubscription] = useState(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
+  const compassData = useCompass();
+  const [locationInfo, setLocationInfo] = useState({ city: '', country: '' });
+  const [showMap, setShowMap] = useState(false);
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const calibrationOpacity = useRef(new Animated.Value(0)).current;
 
+  // Animate compass rotation smoothly
   useEffect(() => {
-    initializeQibla();
+    if (compassData.pointerRotation !== null) {
+      Animated.timing(rotationAnim, {
+        toValue: compassData.pointerRotation,
+        duration: 100,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [compassData.pointerRotation]);
 
-    return () => {
-      if (subscription) {
-        subscription.remove();
+  // Show calibration hint animation
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(calibrationOpacity, {
+        toValue: compassData.needsCalibration ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [compassData.needsCalibration]);
+
+  // Fetch location name
+  useEffect(() => {
+    const fetchLocationName = async () => {
+      if (compassData.location) {
+        try {
+          const locData = await getCityFromCoordinates(
+            compassData.location.lat,
+            compassData.location.lon
+          );
+          setLocationInfo({
+            city: locData.city || 'Unknown',
+            country: locData.country || '',
+          });
+        } catch (error) {
+          console.error('Failed to fetch location name:', error);
+        }
       }
     };
-  }, []);
+    fetchLocationName();
+  }, [compassData.location]);
 
-  const initializeQibla = async () => {
-    try {
-      setLoading(true);
-      console.log('🕋 [QiblaScreen] Initializing Qibla direction...');
+  if (compassData.error === 'Location permission required') {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[colors.primary, colors.primaryDark]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>📍</Text>
+          <Text style={styles.errorTitle}>Location Permission Required</Text>
+          <Text style={styles.errorMessage}>
+            Please enable location services to find Qibla direction.{'\n\n'}
+            Go to Settings {'>'} Privacy {'>'} Location Services
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
-      // Get user's current GPS location
-      console.log('📍 [QiblaScreen] Requesting GPS coordinates...');
-      const coords = await getCurrentLocation();
-      
-      // Check if location was obtained
-      if (!coords || !coords.latitude || !coords.longitude) {
-        console.error('❌ [QiblaScreen] No coordinates received from getCurrentLocation()');
-        setPermissionDenied(true);
-        Alert.alert(
-          'Location Required',
-          'Please enable location services to find Qibla direction.\n\nGo to Settings > Privacy > Location Services and enable for this app.',
-          [{ text: 'OK' }]
-        );
-        setLoading(false);
-        return;
-      }
+  if (compassData.error === 'Compass not available on this device' || showMap) {
+    // Fallback to map view
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[colors.primary, colors.primaryDark]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>اتجاه القبلة</Text>
+            <Text style={styles.headerSubtitle}>Qibla Direction</Text>
+            {!showMap && (
+              <Text style={styles.fallbackText}>
+                Compass not available - showing map direction
+              </Text>
+            )}
+          </View>
 
-      // Log the actual coordinates received
-      console.log('✅ [QiblaScreen] GPS Coordinates obtained:');
-      console.log(`   Latitude: ${coords.latitude}`);
-      console.log(`   Longitude: ${coords.longitude}`);
-      
-      // Store coordinates for display
-      setUserCoords(coords);
+          {compassData.location && (
+            <MapView
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={{
+                latitude: compassData.location.lat,
+                longitude: compassData.location.lon,
+                latitudeDelta: 20,
+                longitudeDelta: 20,
+              }}
+            >
+              <Marker
+                coordinate={{
+                  latitude: compassData.location.lat,
+                  longitude: compassData.location.lon,
+                }}
+                title="Your Location"
+              />
+              <Marker
+                coordinate={{
+                  latitude: KAABA.lat,
+                  longitude: KAABA.lon,
+                }}
+                title="Kaaba"
+              >
+                <Text style={styles.kaabaMapIcon}>🕋</Text>
+              </Marker>
+              <Polyline
+                coordinates={[
+                  {
+                    latitude: compassData.location.lat,
+                    longitude: compassData.location.lon,
+                  },
+                  { latitude: KAABA.lat, longitude: KAABA.lon },
+                ]}
+                strokeColor={colors.secondary}
+                strokeWidth={2}
+                geodesic={true}
+              />
+            </MapView>
+          )}
 
-      // Calculate Qibla direction from user's location
-      console.log('🧭 [QiblaScreen] Calculating Qibla direction...');
-      const direction = calculateQiblaDirection(
-        coords.latitude,
-        coords.longitude
-      );
-      console.log(`✅ [QiblaScreen] Qibla bearing: ${direction.toFixed(2)}°`);
-      setQiblaDirection(direction);
+          <TouchableOpacity
+            style={styles.switchButton}
+            onPress={() => setShowMap(!showMap)}
+          >
+            <Text style={styles.switchButtonText}>
+              {showMap ? 'Hide Map' : 'Show Map View'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
-      // Calculate distance to Kaaba from user's location
-      console.log('📏 [QiblaScreen] Calculating distance to Kaaba...');
-      const dist = getDistanceToKaaba(coords.latitude, coords.longitude);
-      console.log(`✅ [QiblaScreen] Distance to Kaaba: ${dist.toLocaleString()} km`);
-      setDistance(dist);
-
-      // Get city and country name using OpenCage API
-      console.log('🌍 [QiblaScreen] Fetching location name from OpenCage API...');
-      const locationData = await getCityFromCoordinates(
-        coords.latitude,
-        coords.longitude
-      );
-      
-      console.log('✅ [QiblaScreen] Location data received:');
-      console.log(`   City: ${locationData.city}`);
-      console.log(`   Country: ${locationData.country}`);
-      console.log(`   Formatted: ${locationData.formatted}`);
-      
-      setCityName(locationData.city);
-      setCountryName(locationData.country);
-
-      // Start magnetometer for compass functionality
-      console.log('🧲 [QiblaScreen] Starting magnetometer...');
-      Magnetometer.setUpdateInterval(100);
-      const sub = Magnetometer.addListener((data) => {
-        let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
-        if (angle < 0) angle += 360;
-        setCompassHeading(angle);
-      });
-      setSubscription(sub);
-      console.log('✅ [QiblaScreen] Magnetometer started successfully');
-
-      // Final summary log
-      console.log('🎉 [QiblaScreen] Qibla initialization complete!');
-      console.log('═══════════════════════════════════════════');
-      console.log(`📍 Your Location: ${locationData.city}, ${locationData.country}`);
-      console.log(`🌐 Coordinates: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
-      console.log(`🧭 Qibla Direction: ${direction.toFixed(1)}°`);
-      console.log(`📏 Distance to Kaaba: ${dist.toLocaleString()} km`);
-      console.log('═══════════════════════════════════════════');
-
-      setLoading(false);
-      setPermissionDenied(false);
-    } catch (error) {
-      console.error('❌ [QiblaScreen] Error initializing Qibla:', error);
-      console.error('Error details:', error.message);
-      console.error('Error stack:', error.stack);
-      
-      Alert.alert(
-        'Error',
-        `Unable to initialize Qibla direction.\n\nError: ${error.message}\n\nPlease ensure location services are enabled.`,
-        [{ text: 'Retry', onPress: initializeQibla }, { text: 'Cancel' }]
-      );
-      setLoading(false);
-    }
-  };
-
-  const getRotation = () => {
-    return qiblaDirection - compassHeading;
-  };
+  const loading = !compassData.location || compassData.deviceHeading === null;
 
   if (loading) {
     return (
@@ -170,36 +194,45 @@ const QiblaScreen = () => {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>اتجاه القبلة</Text>
           <Text style={styles.headerSubtitle}>Qibla Direction</Text>
-          
+
           {/* Location Display */}
           <View style={styles.locationContainer}>
             <Text style={styles.locationIcon}>📍</Text>
             <View style={styles.locationTextContainer}>
               <Text style={styles.locationText}>
-                {cityName && countryName ? `${cityName}, ${countryName}` : 'Loading location...'}
+                {locationInfo.city && locationInfo.country
+                  ? `${locationInfo.city}, ${locationInfo.country}`
+                  : 'Loading location...'}
               </Text>
-              {userCoords && (
+              {compassData.location && (
                 <Text style={styles.coordsText}>
-                  {userCoords.latitude.toFixed(4)}°, {userCoords.longitude.toFixed(4)}°
+                  {compassData.location.lat.toFixed(4)}°,{' '}
+                  {compassData.location.lon.toFixed(4)}°
                 </Text>
               )}
             </View>
           </View>
-          
+
           {/* Distance Display */}
-          <Text style={styles.distanceText}>
-            {distance.toLocaleString()} km to Kaaba
-          </Text>
+          {compassData.distance && (
+            <Text style={styles.distanceText}>
+              {Math.round(compassData.distance).toLocaleString()} km to Kaaba
+            </Text>
+          )}
         </View>
 
         {/* Compass */}
         <View style={styles.compassContainer}>
           <View style={styles.compass}>
             {/* Compass Circle */}
-            <View
+            <Animated.View
               style={[
                 styles.compassCircle,
-                { transform: [{ rotate: `${-compassHeading}deg` }] },
+                {
+                  transform: [
+                    { rotate: `${-compassData.deviceHeading || 0}deg` },
+                  ],
+                },
               ]}
             >
               {/* Cardinal Directions */}
@@ -207,23 +240,44 @@ const QiblaScreen = () => {
               <Text style={[styles.cardinalText, styles.eastText]}>E</Text>
               <Text style={[styles.cardinalText, styles.southText]}>S</Text>
               <Text style={[styles.cardinalText, styles.westText]}>W</Text>
-            </View>
+            </Animated.View>
 
             {/* Kaaba Icon */}
-            <View
+            <Animated.View
               style={[
                 styles.kaabaIndicator,
-                { transform: [{ rotate: `${getRotation()}deg` }] },
+                {
+                  transform: [
+                    {
+                      rotate: rotationAnim.interpolate({
+                        inputRange: [-180, 180],
+                        outputRange: ['-180deg', '180deg'],
+                      }),
+                    },
+                  ],
+                },
               ]}
             >
               <View style={styles.arrow}>
                 <Text style={styles.kaabaIcon}>🕋</Text>
                 <View style={styles.arrowShape} />
               </View>
-            </View>
+            </Animated.View>
 
             {/* Center Dot */}
             <View style={styles.centerDot} />
+
+            {/* Calibration Hint */}
+            <Animated.View
+              style={[
+                styles.calibrationHint,
+                { opacity: calibrationOpacity },
+              ]}
+            >
+              <Text style={styles.calibrationText}>
+                Rotate device in figure-8 pattern to calibrate
+              </Text>
+            </Animated.View>
           </View>
         </View>
 
@@ -231,11 +285,15 @@ const QiblaScreen = () => {
         <View style={styles.infoContainer}>
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>Direction</Text>
-            <Text style={styles.infoValue}>{Math.round(qiblaDirection)}°</Text>
+            <Text style={styles.infoValue}>
+              {Math.round(compassData.qiblaDirection || 0)}°
+            </Text>
           </View>
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>Distance</Text>
-            <Text style={styles.infoValue}>{distance} km</Text>
+            <Text style={styles.infoValue}>
+              {Math.round(compassData.distance || 0)} km
+            </Text>
           </View>
         </View>
 
@@ -245,6 +303,14 @@ const QiblaScreen = () => {
             Hold your device flat and rotate until the Kaaba icon points up
           </Text>
         </View>
+
+        {/* Show Map Button */}
+        <TouchableOpacity
+          style={styles.mapButton}
+          onPress={() => setShowMap(true)}
+        >
+          <Text style={styles.mapButtonText}>Show Map View</Text>
+        </TouchableOpacity>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -279,6 +345,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: colors.secondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   header: {
     alignItems: 'center',
     marginTop: spacing.lg,
@@ -294,6 +383,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.secondary,
     marginBottom: spacing.sm,
+  },
+  fallbackText: {
+    fontSize: 14,
+    color: colors.secondary,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -398,6 +493,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     ...shadows.small,
   },
+  calibrationHint: {
+    position: 'absolute',
+    bottom: -30,
+    backgroundColor: 'rgba(255,215,0,0.9)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+  },
+  calibrationText: {
+    fontSize: 12,
+    color: '#000',
+    fontWeight: '600',
+  },
   infoContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -433,6 +541,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  mapButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: spacing.sm,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  mapButtonText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
   footer: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     padding: spacing.md,
@@ -459,6 +579,26 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  map: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+    marginVertical: spacing.lg,
+  },
+  kaabaMapIcon: {
+    fontSize: 32,
+  },
+  switchButton: {
+    backgroundColor: colors.secondary,
+    padding: spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  switchButtonText: {
+    fontSize: 16,
+    color: colors.primaryDark,
+    fontWeight: 'bold',
   },
 });
 
