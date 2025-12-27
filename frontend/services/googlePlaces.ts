@@ -29,6 +29,37 @@ interface PlacesResponse {
 const GOOGLE_PLACES_URL = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
 
 /**
+ * Filter function to determine if a place is actually a mosque
+ * Prevents non-mosque places from appearing on the map
+ */
+function isMosque(place: any): boolean {
+  const name = place.name?.toLowerCase() || '';
+  const types = place.types || [];
+  
+  // EXCLUDE if clearly not a mosque
+  const excludedTypes = ['restaurant', 'cafe', 'store', 'shopping_mall', 'gym', 'school', 
+                         'university', 'hospital', 'pharmacy', 'gas_station', 'bank', 'atm'];
+  if (types.some((t: string) => excludedTypes.includes(t))) {
+    return false;
+  }
+  
+  // INCLUDE if types explicitly contains mosque
+  if (types.includes('mosque')) {
+    return true;
+  }
+  
+  // INCLUDE if name contains mosque-related keywords
+  const mosqueKeywords = ['mosque', 'masjid', 'musalla', 'mussalla', 'islamic center', 
+                          'مسجد', 'جامع', 'مصلى'];
+  if (mosqueKeywords.some(keyword => name.includes(keyword))) {
+    return true;
+  }
+  
+  // Default: exclude
+  return false;
+}
+
+/**
  * Fetch nearby mosques from Google Places API
  */
 export async function fetchNearbyMosques({
@@ -54,11 +85,11 @@ export async function fetchNearbyMosques({
     const mosques: MosqueData[] = [];
     let nextPageToken: string | undefined;
     
-    // First request
+    // First request - increased radius for better coverage
     const params: any = {
       location: `${lat},${lon}`,
-      radius: 5000,
-      type: 'mosque',
+      radius: 5000, // 5km search radius
+      keyword: 'mosque OR masjid OR musalla OR islamic center OR مسجد', // Better keyword matching
       language: 'ar',
       key: apiKey,
     };
@@ -94,18 +125,27 @@ export async function fetchNearbyMosques({
       }
     }
 
-    // Process results
+    // Process and FILTER results - ONLY keep actual mosques
+    const rawCount = response.data.results.length;
+    
     response.data.results.forEach((place) => {
-      const mosque: MosqueData = {
-        id: place.place_id,
-        name: place.name,
-        lat: place.geometry.location.lat,
-        lon: place.geometry.location.lng,
-        vicinity: place.vicinity,
-        distanceMeters: calculateDistance(lat, lon, place.geometry.location.lat, place.geometry.location.lng),
-      };
-      mosques.push(mosque);
+      // MANDATORY FILTER: Only keep actual mosques
+      if (isMosque(place)) {
+        const mosque: MosqueData = {
+          id: place.place_id,
+          name: place.name,
+          lat: place.geometry.location.lat,
+          lon: place.geometry.location.lng,
+          vicinity: place.vicinity,
+          distanceMeters: calculateDistance(lat, lon, place.geometry.location.lat, place.geometry.location.lng),
+        };
+        mosques.push(mosque);
+      }
     });
+    
+    if (__DEV__) {
+      console.log(`🔍 [GooglePlaces] Filtered ${rawCount} → ${mosques.length} mosques`);
+    }
 
     nextPageToken = response.data.next_page_token;
 
@@ -124,17 +164,28 @@ export async function fetchNearbyMosques({
         });
 
         if (nextResponse.data.status === 'OK') {
+          const pagRawCount = nextResponse.data.results.length;
+          let pagFilteredCount = 0;
+          
           nextResponse.data.results.forEach((place) => {
-            const mosque: MosqueData = {
-              id: place.place_id,
-              name: place.name,
-              lat: place.geometry.location.lat,
-              lon: place.geometry.location.lng,
-              vicinity: place.vicinity,
-              distanceMeters: calculateDistance(lat, lon, place.geometry.location.lat, place.geometry.location.lng),
-            };
-            mosques.push(mosque);
+            // Apply same mosque filter to pagination results
+            if (isMosque(place)) {
+              const mosque: MosqueData = {
+                id: place.place_id,
+                name: place.name,
+                lat: place.geometry.location.lat,
+                lon: place.geometry.location.lng,
+                vicinity: place.vicinity,
+                distanceMeters: calculateDistance(lat, lon, place.geometry.location.lat, place.geometry.location.lng),
+              };
+              mosques.push(mosque);
+              pagFilteredCount++;
+            }
           });
+          
+          if (__DEV__) {
+            console.log(`🔍 [GooglePlaces] Page 2: Filtered ${pagRawCount} → ${pagFilteredCount} mosques`);
+          }
         }
       } catch (error) {
         console.warn('⚠️ [GooglePlaces] Failed to fetch next page:', error);
@@ -149,7 +200,13 @@ export async function fetchNearbyMosques({
     // Sort by distance
     uniqueMosques.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
 
-    console.log(`✅ [GooglePlaces] Found ${uniqueMosques.length} mosques`);
+    if (__DEV__) {
+      console.log(`✅ [GooglePlaces] Final result: ${uniqueMosques.length} verified mosques`);
+      if (uniqueMosques.length === 0) {
+        console.warn('⚠️ [GooglePlaces] Zero mosques after filtering. Try increasing search radius or using alternative keywords.');
+      }
+    }
+    
     return uniqueMosques;
 
   } catch (error) {
